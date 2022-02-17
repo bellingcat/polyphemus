@@ -62,7 +62,28 @@ class OdyseeChannel:
 
         self.info = info
         self._channel_id = self.info['channel_id']
+
+        self.get_subscribers()
     
+    #-------------------------------------------------------------------------#
+
+    def get_subscribers(self):
+
+        """Get the number of subscribers for a channel.  
+        """
+
+        api_url = 'https://api.odysee.com/subscription/sub_count'
+
+        post_data = {
+            'auth_token': AUTH_TOKEN,
+            'claim_id': self.info['channel_id'] }
+
+        response = requests.post(url = api_url, data = post_data)
+        result = json.loads(response.text)
+        subscribers = result['data'][0]
+
+        self.info['subscribers'] = subscribers
+
     #-------------------------------------------------------------------------#
 
     def get_all_videos(self):
@@ -115,7 +136,7 @@ class OdyseeChannel:
     def process_all_videos(self):
         
         self.get_all_videos()
-        all_videos_processed = [OdyseeVideo(video).info for video in self._all_videos]
+        all_videos_processed = [OdyseeVideo(video) for video in self._all_videos]
         
         return all_videos_processed
     
@@ -125,7 +146,7 @@ class OdyseeChannel:
         
         self.get_all_videos()
         all_videos = [OdyseeVideo(video) for video in self._all_videos]
-        all_videos_processed = [video.info for video in all_videos]
+        all_videos_processed = [video for video in all_videos]
         
         all_comments_processed = []
         
@@ -185,7 +206,7 @@ class OdyseeVideo:
         """Get all reactions for a given video.  
         """
 
-        api_url = f'https://api.odysee.com/reaction/list'
+        api_url = 'https://api.odysee.com/reaction/list'
 
         post_data = {
             'auth_token': AUTH_TOKEN,
@@ -263,7 +284,7 @@ class OdyseeVideo:
 
     #-------------------------------------------------------------------------#
     
-    def get_recommended(self, n = 20):
+    def get_recommended(self):
         
         api_url = 'https://recsys.odysee.com/search'
 
@@ -271,14 +292,14 @@ class OdyseeVideo:
 
         params = {
             's':name,
-            'size':str(int(n)),
+            'size':'20',
             'from':'0',
             'related_to':self._claim_id}
         
         response = requests.get(api_url, params = params)
         result = json.loads(response.text)
         
-        recommended_video_info = [name_to_video_info(r['name']) for r in result]
+        recommended_video_info = [_name_to_video_info(r['name']) for r in result]
         recommended_video_info = [vi for vi in recommended_video_info if vi['value_type'] == 'stream']
         recommended_videos = [OdyseeVideo(video_info) for video_info in recommended_video_info]
 

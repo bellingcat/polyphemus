@@ -13,7 +13,6 @@ import pandas as pd
 
 from polyphemus.base import OdyseeChannel
 
-
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 CHANNEL_NAME = 'PatriotFront'
