@@ -24,11 +24,11 @@ if __name__ == '__main__':
 
     odysee_channel = OdyseeChannel(channel_name = CHANNEL_NAME)
 
-    video_info_list, comment_info_list = odysee_channel.process_all_videos_and_comments()
+    video_list, comment_list = odysee_channel.get_all_videos_and_comments()
 
     channel_df = pd.DataFrame([odysee_channel.info])
-    video_df = pd.DataFrame(video_info_list)
-    comment_df = pd.DataFrame(comment_info_list)
+    video_df = pd.DataFrame([v.info for v in video_list])
+    comment_df = pd.DataFrame([c.info for c in comment_list])
 
     output_subdir = Path(OUTPUT_DIR, CHANNEL_NAME)
     os.makedirs(output_subdir, exist_ok = True)
