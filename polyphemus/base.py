@@ -68,21 +68,58 @@ class OdyseeVideo:
     #-------------------------------------------------------------------------#
     
     def __init__(self, full_video_info):
+
+        # Handle edge cases
+        #.....................................................................#
+
+        if 'video' in full_video_info['value']:
+            video_type = 'video'
+            duration = full_video_info['value']['video'].get('duration')
+        elif 'audio' in full_video_info['value']:
+            video_type = 'audio'
+            duration = full_video_info['value']['audio'].get('duration')
+        else:
+            raise KeyError(f'nether `video` or `audio` keys are in `full_video_info["value"]`, only {full_video_info["value"].keys()}')
+
+        if 'signing_channel' in full_video_info:
+            channel_name = full_video_info['signing_channel'].get('name')
+            if 'claim_id' in full_video_info['signing_channel']:
+                channel_id = full_video_info['signing_channel']['claim_id']
+            else:
+                channel_id = full_video_info['signing_channel']['channel_id']
+        else:
+            channel_name = None
+            channel_id = None
+
+        if 'release_time' in full_video_info['value']:
+            created = full_video_info['value']['release_time']
+        else:
+            created = full_video_info['meta']['creation_timestamp']
+
+        if 'thumbnail' in full_video_info['value']:
+            thumbnail = full_video_info['value']['thumbnail'].get('url', None)
+        else:
+            thumbnail = None
+        
+        # Store relevant information in flat dict
+        #.....................................................................#
         
         self.info = {
             'canonical_url' : full_video_info['canonical_url'],
-            'channel' : full_video_info['signing_channel']['name'],
+            'type' : video_type,
+            'channel_id' : channel_id,
+            'channel' : channel_name,
             'claim_id' : full_video_info['claim_id'],
-            'created' : full_video_info['value']['release_time'],
+            'created' : created,
             'description' : full_video_info['value'].get('description'),
             'languages' : full_video_info['value'].get('languages'),
             'tags' : full_video_info['value'].get('tags',[]),
             'title' : full_video_info['value']['title'],
-            'duration' : full_video_info['value']['video']['duration'],
-            'thumbnail' : full_video_info['value']['thumbnail']['url'],
+            'duration' : duration,
+            'thumbnail' : thumbnail,
             'raw' : json.dumps(full_video_info)}
         
-        self._claim_id = self.info ['claim_id']
+        self._claim_id = self.info['claim_id']
 
         self.info['views'] = api.get_views(claim_id=self._claim_id)
 
