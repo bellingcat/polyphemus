@@ -50,11 +50,11 @@ def get_channel_info(channel_name):
     
     info = {
         'channel_id' : info['claim_id'],
-        'title' : info['value']['title'],
+        'title' : info['value'].get('title'),
         'created': info['timestamp'],
-        'description': info['value']['description'],
-        'cover_image': info['value']['cover']['url'],
-        'thumbnail_image': info['value']['thumbnail']['url'],
+        'description': info['value'].get('description'),
+        'cover_image': info['value'].get('cover',{}).get('url'),
+        'thumbnail_image': info['value'].get('thumbnail',{}).get('url'),
         'raw' : response.text}
 
     return info 
