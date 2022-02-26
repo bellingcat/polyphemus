@@ -290,3 +290,19 @@ def name_to_video_info(name):
     return result['result'][video_url]
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+def get_streaming_url(canonical_url):
+    
+    json_data = {
+        "jsonrpc":"2.0",
+        "method":"get",
+        "params":{
+            "uri":canonical_url}}
+
+    result = requests.post(url = BACKEND_API_URL, json = json_data )
+
+    video_url = json.loads(result.text)['result'].get('streaming_url')
+
+    return video_url
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#

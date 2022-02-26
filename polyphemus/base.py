@@ -83,6 +83,7 @@ class OdyseeVideo:
             duration = None
             
             full_video_info['value'] = full_video_info['reposted_claim']['value']
+            full_video_info['canonical_url'] = full_video_info['reposted_claim']['canonical_url']
 
         else:
             raise KeyError(f'nether `video`, `audio`, nor `claim_hash` keys are in `full_video_info["value"]`, only {full_video_info["value"].keys()}')
@@ -116,7 +117,7 @@ class OdyseeVideo:
             'channel_id' : channel_id,
             'channel' : channel_name,
             'claim_id' : full_video_info['claim_id'],
-            'created' : created,
+            'created' : int(created),
             'description' : full_video_info['value'].get('description'),
             'languages' : full_video_info['value'].get('languages'),
             'tags' : full_video_info['value'].get('tags',[]),
@@ -131,7 +132,9 @@ class OdyseeVideo:
 
         self.info['likes'], self.info['dislikes']= api.get_video_reactions(
             claim_id = self._claim_id)
-        
+
+        self.info['streaming_url'] = api.get_streaming_url(self.info['canonical_url'])
+
     #-------------------------------------------------------------------------#
 
     def get_all_comments(self):
