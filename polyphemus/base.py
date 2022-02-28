@@ -165,6 +165,7 @@ class OdyseeComment:
         self.info = {
             'text' : full_comment_info['comment'],
             'created' : full_comment_info['timestamp'],
+            'claim_id' : full_comment_info.get('comment_id'),
             'video_claim_id' : full_comment_info['claim_id'],
             'channel_id' : full_comment_info['channel_id'],
             'channel_name' : full_comment_info['channel_name'],
