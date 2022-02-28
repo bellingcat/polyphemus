@@ -40,7 +40,7 @@ class OdyseeChannel:
         """
 
         all_video_info = api.get_all_videos(channel_id=self.info['channel_id'])
-        self.all_videos = [OdyseeVideo(video) for video in all_video_info]
+        self.all_videos = (OdyseeVideo(video) for video in all_video_info)
         
         return self.all_videos
 
@@ -115,15 +115,16 @@ class OdyseeVideo:
             'canonical_url' : full_video_info['canonical_url'],
             'type' : video_type,
             'channel_id' : channel_id,
-            'channel' : channel_name,
+            'channel_name' : channel_name,
             'claim_id' : full_video_info['claim_id'],
             'created' : int(created),
-            'description' : full_video_info['value'].get('description'),
+            'text' : full_video_info['value'].get('description'),
             'languages' : full_video_info['value'].get('languages'),
             'tags' : full_video_info['value'].get('tags',[]),
             'title' : full_video_info['value']['title'],
             'duration' : duration,
             'thumbnail' : thumbnail,
+            'is_comment' : False,
             'raw' : json.dumps(full_video_info)}
         
         self._claim_id = self.info['claim_id']
@@ -140,7 +141,7 @@ class OdyseeVideo:
     def get_all_comments(self):
         
         all_comment_info = api.get_all_comments(claim_id=self._claim_id)
-        self.all_comments = [OdyseeComment(comment) for comment in all_comment_info]
+        self.all_comments = (OdyseeComment(comment) for comment in all_comment_info)
         
         return self.all_comments
 
@@ -160,8 +161,9 @@ class OdyseeComment:
 
     def __init__(self, full_comment_info):
         
+        # Store relevant information in flat dict
         self.info = {
-            'comment' : full_comment_info['comment'],
+            'text' : full_comment_info['comment'],
             'created' : full_comment_info['timestamp'],
             'video_claim_id' : full_comment_info['claim_id'],
             'channel_id' : full_comment_info['channel_id'],
@@ -169,6 +171,7 @@ class OdyseeComment:
             'replies' : full_comment_info.get('replies', 0),
             'likes' : full_comment_info['likes'],
             'dislikes' : full_comment_info['dislikes'],
+            'is_comment' : True,
             'raw' : json.dumps(full_comment_info)}
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
