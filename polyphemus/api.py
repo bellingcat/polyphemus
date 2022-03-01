@@ -27,6 +27,30 @@ RECOMMENDATION_API_URL = 'https://recsys.odysee.com/search'
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+def make_request(request, kwargs):
+
+    """Wrapper for retrying request multiple times.
+    """
+
+    if request not in [requests.get, requests.post]:
+        msg = f'`request` argument must be either `requests.get` or `requests.post`, not {type(request)}'
+        raise ValueError(msg)
+
+    n_retries = 0
+    response = request(**kwargs)
+
+    while response.status_code != 200 and n_retries < 5:
+        n_retries += 1
+        response = request(**kwargs)
+
+    if response.status_code != 200:
+        msg = f'Maximum number of retries reached for request {request} with kwargs {kwargs}'
+        raise ValueError(msg)
+
+    return response
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
 def get_channel_info(channel_name):
 
     """Get the channel information and ID from the channel name. 
@@ -34,15 +58,17 @@ def get_channel_info(channel_name):
 
     channel_url = f'lbry://@{channel_name}'
 
-    post_json = {
+    json_data = {
         "jsonrpc":"2.0",
         "method":"resolve",
         "params":{
             "urls":[channel_url]}}
 
-    response = requests.post(
-        url = BACKEND_API_URL, 
-        json = post_json)
+    response = make_request(
+        request = requests.post,
+        kwargs = {
+            'url' : BACKEND_API_URL, 
+            'json': json_data})
 
     result = json.loads(response.text)
     
@@ -70,7 +96,12 @@ def get_subscribers(claim_id):
         'auth_token': AUTH_TOKEN,
         'claim_id': claim_id }
 
-    response = requests.post(url = SUBSCRIBER_API_URL, data = json_data)
+    response = make_request(
+        request = requests.post,
+        kwargs = {
+            'url' : SUBSCRIBER_API_URL, 
+            'data': json_data})
+
     result = json.loads(response.text)
     subscribers = result['data'][0]
 
@@ -105,9 +136,11 @@ def get_all_videos(channel_id):
                 "order_by":["release_time"],
                 "channel_ids":[channel_id]}}
 
-        response = requests.post(
-            url = BACKEND_API_URL, 
-            json = json_data)
+        response = make_request(
+            request = requests.post,
+            kwargs = {
+                'url' : BACKEND_API_URL, 
+                'json': json_data})
 
         result = json.loads(response.text)
 
@@ -132,7 +165,12 @@ def get_views(claim_id):
         'auth_token': AUTH_TOKEN,
         'claim_id': claim_id }
 
-    response = requests.get(url = VIEW_API_URL, params = params)
+    response = make_request(
+        request = requests.get,
+        kwargs = {
+            'url' : VIEW_API_URL, 
+            'params': params})
+
     views = json.loads(response.text)['data'][0]
 
     return views
@@ -148,7 +186,12 @@ def get_video_reactions(claim_id):
         'auth_token': AUTH_TOKEN,
         'claim_ids': claim_id }
 
-    response = requests.post(url = REACTION_API_URL, data = post_data)
+    response = make_request(
+        request = requests.post,
+        kwargs = {
+            'url' : REACTION_API_URL, 
+            'data': post_data})
+
     result = json.loads(response.text)
 
     if result['success']:
@@ -193,9 +236,11 @@ def get_all_comments(claim_id):
                 "top_level":False,
                 "sort_by":3}}
 
-        response = requests.post(
-            url = COMMENT_API_URL, 
-            json = json_data)
+        response = make_request(
+            request = requests.post,
+            kwargs = {
+                'url' : COMMENT_API_URL, 
+                'json': json_data})
 
         result = json.loads(response.text)
 
@@ -241,7 +286,12 @@ def append_comment_reactions(comments):
         "params":{
             "comment_ids":comment_ids}}
 
-    response = requests.post(url = COMMENT_API_URL, json = json_data)
+    response = make_request(
+        request = requests.post,
+        kwargs = {
+            'url' : COMMENT_API_URL, 
+            'json': json_data})
+
     result = json.loads(response.text)
 
     reactions = result['result']['others_reactions']
@@ -264,7 +314,12 @@ def get_recommended(title, claim_id):
         'from':'0',
         'related_to':claim_id}
     
-    response = requests.get(url = RECOMMENDATION_API_URL, params = params)
+    response = make_request(
+        request = requests.get,
+        kwargs = {
+            'url' : RECOMMENDATION_API_URL, 
+            'params': params})
+
     result = json.loads(response.text)
     
     recommended_video_info = [ name_to_video_info(r['name']) for r in result]
@@ -284,7 +339,12 @@ def name_to_video_info(name):
         "params":{
             "urls":[video_url]}}
 
-    response = requests.post(url = BACKEND_API_URL, json = json_data)
+    response = make_request(
+        request = requests.post,
+        kwargs = {
+            'url' : BACKEND_API_URL, 
+            'json': json_data})
+
     result = json.loads(response.text)
     
     return result['result'][video_url]
@@ -299,9 +359,13 @@ def get_streaming_url(canonical_url):
         "params":{
             "uri":canonical_url}}
 
-    result = requests.post(url = BACKEND_API_URL, json = json_data )
+    response = make_request(
+        request = requests.post,
+        kwargs = {
+            'url' : BACKEND_API_URL, 
+            'json': json_data})
 
-    video_url = json.loads(result.text)['result'].get('streaming_url')
+    video_url = json.loads(response.text)['result'].get('streaming_url')
 
     return video_url
 

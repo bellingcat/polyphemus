@@ -52,7 +52,7 @@ class OdyseeChannel:
         posted by the channel and all comments posted to those videos
         """
 
-        all_videos = self.get_all_videos()
+        all_videos = list(self.get_all_videos())
 
         all_comments = []
         
