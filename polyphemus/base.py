@@ -30,7 +30,7 @@ class OdyseeChannel:
         self.info = info
         self._channel_id = self.info['channel_id']
 
-        self.info['subscribers'] = api.get_subscribers(claim_id = self.info['channel_id'])
+        self.info['subscribers'] = api.get_subscribers(channel_id = self.info['channel_id'])
     
     #-------------------------------------------------------------------------#
 
@@ -127,12 +127,12 @@ class OdyseeVideo:
             'is_comment' : False,
             'raw' : json.dumps(full_video_info)}
         
-        self._claim_id = self.info['claim_id']
+        self.claim_id = self.info['claim_id']
 
-        self.info['views'] = api.get_views(claim_id=self._claim_id)
+        self.info['views'] = api.get_views(video_id=self.claim_id)
 
         self.info['likes'], self.info['dislikes']= api.get_video_reactions(
-            claim_id = self._claim_id)
+            video_id = self.claim_id)
 
         self.info['streaming_url'] = api.get_streaming_url(self.info['canonical_url'])
 
@@ -140,7 +140,7 @@ class OdyseeVideo:
 
     def get_all_comments(self):
         
-        all_comment_info = api.get_all_comments(claim_id=self._claim_id)
+        all_comment_info = api.get_all_comments(video_id=self.claim_id)
         self.all_comments = (OdyseeComment(comment) for comment in all_comment_info)
         
         return self.all_comments
@@ -150,7 +150,7 @@ class OdyseeVideo:
     def get_recommended(self):
         
         recommended_video_info = api.get_recommended(
-            title=self.info['title'], claim_id=self._claim_id)
+            video_title=self.info['title'], video_id=self.claim_id)
         recommended_videos = [OdyseeVideo(video_info) for video_info in recommended_video_info]
 
         return recommended_videos

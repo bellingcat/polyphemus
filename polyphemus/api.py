@@ -87,14 +87,14 @@ def get_channel_info(channel_name):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_subscribers(claim_id):
+def get_subscribers(channel_id):
 
     """Get the number of subscribers for a channel.  
     """
 
     json_data = {
         'auth_token': AUTH_TOKEN,
-        'claim_id': claim_id }
+        'claim_id': channel_id }
 
     response = make_request(
         request = requests.post,
@@ -156,14 +156,14 @@ def get_all_videos(channel_id):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_views(claim_id):
+def get_views(video_id):
 
     """Get the number of views for a given video.
     """
 
     params = {
         'auth_token': AUTH_TOKEN,
-        'claim_id': claim_id }
+        'claim_id': video_id }
 
     response = make_request(
         request = requests.get,
@@ -177,14 +177,14 @@ def get_views(claim_id):
     
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_video_reactions(claim_id):
+def get_video_reactions(video_id):
 
     """Get all reactions for a given video.  
     """
 
     post_data = {
         'auth_token': AUTH_TOKEN,
-        'claim_ids': claim_id }
+        'claim_ids': video_id }
 
     response = make_request(
         request = requests.post,
@@ -195,20 +195,20 @@ def get_video_reactions(claim_id):
     result = json.loads(response.text)
 
     if result['success']:
-        reactions = result['data']['others_reactions'][claim_id ]
+        reactions = result['data']['others_reactions'][video_id]
         return reactions['like'], reactions['dislike']
     else:
         return None, None
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_all_comments(claim_id):
+def get_all_comments(video_id):
 
     """Get a list of all comments for a single video. 
 
     Parameters
     ----------
-    claim_id: str
+    video_id: str
         Claim ID for the video whose comments are to be scraped
         e.g. ``'84d2a91e910bee523af5422439a639f677b9c78f'`` 
 
@@ -231,7 +231,7 @@ def get_all_comments(claim_id):
             "method":"comment.List",
             "params":{
                 "page":page,
-                "claim_id":claim_id,
+                "claim_id":video_id,
                 "page_size":10,
                 "top_level":False,
                 "sort_by":3}}
@@ -248,7 +248,7 @@ def get_all_comments(claim_id):
             break
         else:
             _comments = result['result']['items']
-            comments = append_comment_reactions(comments = _comments)
+            comments = append_comment_reactions(comment_info_list = _comments)
             all_comments.extend(comments)
             page += 1
 
@@ -256,14 +256,14 @@ def get_all_comments(claim_id):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def append_comment_reactions(comments):
+def append_comment_reactions(comment_info_list):
     
     """Get reaction data for each comment and insert ``'reactions'`` key into 
     dict for each comment.
 
     Parameters
     ----------
-    comments: list<dict>
+    comment_info_list: list<dict>
         List of dictionaries, with each dict corresponding to a JSON response 
         containing data about a single comment for the specified video.
 
@@ -277,7 +277,7 @@ def append_comment_reactions(comments):
 
     """
     
-    comment_ids = ','.join([c['comment_id'] for c in comments])
+    comment_ids = ','.join([c['comment_id'] for c in comment_info_list])
 
     json_data = {
         "jsonrpc":"2.0",
@@ -296,23 +296,23 @@ def append_comment_reactions(comments):
 
     reactions = result['result']['others_reactions']
     
-    for comment in comments:
+    for comment in comment_info_list:
         comment['likes'] = reactions[comment['comment_id']]['like']
         comment['dislikes'] = reactions[comment['comment_id']]['dislike']
         
-    return comments
+    return comment_info_list
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_recommended(title, claim_id):
+def get_recommended(video_title, video_id):
     
-    name = quote(title)
+    name = quote(video_title)
 
     params = {
         's':name,
         'size':'20',
         'from':'0',
-        'related_to':claim_id}
+        'related_to':video_id}
     
     response = make_request(
         request = requests.get,
@@ -322,16 +322,16 @@ def get_recommended(title, claim_id):
 
     result = json.loads(response.text)
     
-    recommended_video_info = [ name_to_video_info(r['name']) for r in result]
+    recommended_video_info = [ normalized_name_to_video_info(r['name']) for r in result]
     recommended_video_info = [vi for vi in recommended_video_info if ((vi.get('value_type') == 'stream') & any(key in vi.get('value', []) for key in ('video', 'audio')))]
 
     return recommended_video_info
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def name_to_video_info(name):
+def normalized_name_to_video_info(normalized_name):
 
-    video_url = f"lbry://{name}"
+    video_url = f"lbry://{normalized_name}"
     
     json_data = {
         "jsonrpc":"2.0",
