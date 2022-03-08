@@ -20,11 +20,12 @@ from polyphemus import api
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 KWARGS_LIST = [
+    ('get_auth_token', []),
     ('get_channel_info', ['channel_name']),
-    ('get_subscribers', ['channel_id']),
+    ('get_subscribers', ['channel_id', 'auth_token']),
     ('get_all_videos', ['channel_id']),
-    ('get_views', ['video_id']),
-    ('get_video_reactions', ['video_id']),
+    ('get_views', ['video_id', 'auth_token']),
+    ('get_video_reactions', ['video_id', 'auth_token']),
     ('get_all_comments', ['video_id']),
     ('append_comment_reactions', ['comment_info_list']),
     ('normalized_name_to_video_info', ['normalized_name']),

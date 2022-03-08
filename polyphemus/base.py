@@ -12,11 +12,6 @@ from polyphemus import api
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#TODO Figure out how to reverse-engineer this
-AUTH_TOKEN = 'BseGAiye641UqUsv4g31ZcUCRiLasv3U'
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
 class OdyseeChannel:
 
     #-------------------------------------------------------------------------#
@@ -30,7 +25,11 @@ class OdyseeChannel:
         self.info = info
         self._channel_id = self.info['channel_id']
 
-        self.info['subscribers'] = api.get_subscribers(channel_id = self.info['channel_id'])
+        self.auth_token = api.get_auth_token()
+
+        self.info['subscribers'] = api.get_subscribers(
+            channel_id = self.info['channel_id'],
+            auth_token = self.auth_token)
     
     #-------------------------------------------------------------------------#
 
@@ -40,7 +39,7 @@ class OdyseeChannel:
         """
 
         all_video_info = api.get_all_videos(channel_id=self.info['channel_id'])
-        self.all_videos = (OdyseeVideo(video) for video in all_video_info)
+        self.all_videos = (OdyseeVideo(video, self.auth_token) for video in all_video_info)
         
         return self.all_videos
 
@@ -67,7 +66,12 @@ class OdyseeVideo:
 
     #-------------------------------------------------------------------------#
     
-    def __init__(self, full_video_info):
+    def __init__(self, full_video_info, auth_token = None):
+
+        if auth_token is None:
+            self.auth_token = api.get_auth_token()
+        else:
+            self.auth_token = auth_token
 
         # Handle edge cases
         #.....................................................................#
@@ -129,10 +133,11 @@ class OdyseeVideo:
         
         self.claim_id = self.info['claim_id']
 
-        self.info['views'] = api.get_views(video_id=self.claim_id)
+        self.info['views'] = api.get_views(video_id=self.claim_id, auth_token = self.auth_token)
 
-        self.info['likes'], self.info['dislikes']= api.get_video_reactions(
-            video_id = self.claim_id)
+        self.info['likes'], self.info['dislikes'] = api.get_video_reactions(
+            video_id = self.claim_id,
+            auth_token = self.auth_token)
 
         self.info['streaming_url'] = api.get_streaming_url(self.info['canonical_url'])
 
@@ -151,7 +156,7 @@ class OdyseeVideo:
         
         recommended_video_info = api.get_recommended(
             video_title=self.info['title'], video_id=self.claim_id)
-        recommended_videos = [OdyseeVideo(video_info) for video_info in recommended_video_info]
+        recommended_videos = [OdyseeVideo(video_info, self.auth_token) for video_info in recommended_video_info]
 
         return recommended_videos
 

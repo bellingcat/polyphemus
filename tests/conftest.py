@@ -7,6 +7,8 @@
 
 import pytest
 
+from polyphemus.api import get_auth_token
+
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 CHANNEL_NAME = 'Mak1nBacon'
@@ -90,7 +92,8 @@ def resources():
         canonical_url = CANONICAL_URL,
         full_video_info = FULL_VIDEO_INFO,
         full_comment_info = {**COMMENT_INFO_LIST[0], **{'likes' : 8, 'dislikes' : 0}},
-        comment_info_list = COMMENT_INFO_LIST)
+        comment_info_list = COMMENT_INFO_LIST,
+        auth_token = get_auth_token())
 
     return resources_dict
 

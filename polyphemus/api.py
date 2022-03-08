@@ -10,11 +10,6 @@ from urllib.parse import quote
 
 import requests
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
-#TODO Figure out how to reverse-engineer this
-AUTH_TOKEN = 'BseGAiye641UqUsv4g31ZcUCRiLasv3U'
-
 # API endpoints for Odysee data
 #-----------------------------------------------------------------------------#
 
@@ -24,6 +19,7 @@ VIEW_API_URL = 'https://api.odysee.com/file/view_count'
 REACTION_API_URL = 'https://api.odysee.com/reaction/list'
 COMMENT_API_URL = 'https://comments.odysee.com/api/v2'
 RECOMMENDATION_API_URL = 'https://recsys.odysee.com/search'
+NEW_USER_API_URL = 'https://api.odysee.com/user/new'
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
@@ -44,10 +40,26 @@ def make_request(request, kwargs):
         response = request(**kwargs)
 
     if response.status_code != 200:
-        msg = f'Maximum number of retries reached for request {request} with kwargs {kwargs}'
+        msg = f'Maximum number of retries reached for request {request} with kwargs {kwargs}: status code {response.status_code}'
         raise ValueError(msg)
 
     return response
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+def get_auth_token():
+
+    """Get a fresh authorization token, to use for API calls that require it. 
+    """
+
+    response = make_request(
+        request = requests.post,
+        kwargs = {
+            'url' : NEW_USER_API_URL})
+
+    auth_token = json.loads(response.text)['data']['auth_token']
+
+    return auth_token
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
@@ -87,13 +99,16 @@ def get_channel_info(channel_name):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_subscribers(channel_id):
+def get_subscribers(channel_id, auth_token = None):
 
     """Get the number of subscribers for a channel.  
     """
 
+    if auth_token is None:
+        auth_token = get_auth_token()
+
     json_data = {
-        'auth_token': AUTH_TOKEN,
+        'auth_token': auth_token,
         'claim_id': channel_id }
 
     response = make_request(
@@ -156,13 +171,16 @@ def get_all_videos(channel_id):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_views(video_id):
+def get_views(video_id, auth_token = None):
 
     """Get the number of views for a given video.
     """
 
+    if auth_token is None:
+        auth_token = get_auth_token()
+
     params = {
-        'auth_token': AUTH_TOKEN,
+        'auth_token': auth_token,
         'claim_id': video_id }
 
     response = make_request(
@@ -177,13 +195,16 @@ def get_views(video_id):
     
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_video_reactions(video_id):
+def get_video_reactions(video_id, auth_token = None):
 
     """Get all reactions for a given video.  
     """
 
+    if auth_token is None:
+        auth_token = get_auth_token()
+
     post_data = {
-        'auth_token': AUTH_TOKEN,
+        'auth_token': auth_token,
         'claim_ids': video_id }
 
     response = make_request(
