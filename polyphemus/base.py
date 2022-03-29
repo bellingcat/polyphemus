@@ -7,6 +7,7 @@
 
 import json
 from dataclasses import dataclass
+from urllib.parse import unquote
 
 from polyphemus import api
 
@@ -18,7 +19,7 @@ class OdyseeChannel:
     
     def __init__(self, channel_name, auth_token = None):
         
-        self._channel_name = channel_name
+        self._channel_name = unquote(channel_name)
 
         info = api.get_channel_info(channel_name = self._channel_name)
 
