@@ -16,7 +16,7 @@ class OdyseeChannel:
 
     #-------------------------------------------------------------------------#
     
-    def __init__(self, channel_name):
+    def __init__(self, channel_name, auth_token = None):
         
         self._channel_name = channel_name
 
@@ -25,7 +25,10 @@ class OdyseeChannel:
         self.info = info
         self._channel_id = self.info['channel_id']
 
-        self.auth_token = api.get_auth_token()
+        if auth_token is None:
+            self.auth_token = api.get_auth_token()
+        else:
+            self.auth_token = auth_token
 
         self.info['subscribers'] = api.get_subscribers(
             channel_id = self.info['channel_id'],
