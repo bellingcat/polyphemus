@@ -89,9 +89,11 @@ class OdyseeVideo:
         elif 'claim_hash' in full_video_info['value']:
             video_type = 'repost'
             duration = None
-            
             full_video_info['value'] = full_video_info['reposted_claim']['value']
             full_video_info['canonical_url'] = full_video_info['reposted_claim']['canonical_url']
+        elif 'image' in full_video_info['value']:
+            video_type = 'image'
+            duration = None
 
         else:
             raise KeyError(f'nether `video`, `audio`, nor `claim_hash` keys are in `full_video_info["value"]`, only {full_video_info["value"].keys()}')
