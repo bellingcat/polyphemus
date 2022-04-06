@@ -6,7 +6,6 @@
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 import json
-from dataclasses import dataclass
 from urllib.parse import unquote
 
 from polyphemus import api
@@ -94,9 +93,9 @@ class OdyseeVideo:
         elif 'image' in full_video_info['value']:
             video_type = 'image'
             duration = None
-
         else:
-            raise KeyError(f'nether `video`, `audio`, nor `claim_hash` keys are in `full_video_info["value"]`, only {full_video_info["value"].keys()}')
+            video_type = 'other'
+            duration = None
 
         if 'signing_channel' in full_video_info:
             channel_name = full_video_info['signing_channel'].get('name')
