@@ -23,7 +23,7 @@ KWARGS_LIST = [
     ('get_auth_token', []),
     ('get_channel_info', ['channel_name']),
     ('get_subscribers', ['channel_id', 'auth_token']),
-    ('get_all_videos', ['channel_id']),
+    ('get_raw_video_info_list', ['channel_id']),
     ('get_views', ['video_id', 'auth_token']),
     ('get_video_reactions', ['video_id', 'auth_token']),
     ('get_all_comments', ['video_id']),
@@ -34,12 +34,12 @@ KWARGS_LIST = [
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-@pytest.mark.parametrize( 'function_str,kwargs', KWARGS_LIST )
-def test_minimal_init( resources, function_str, kwargs ):
+@pytest.mark.parametrize('function_str,kwargs', KWARGS_LIST)
+def test_minimal_init(resources, function_str, kwargs):
 
-  function = eval( f'api.{function_str}')
-  function_kwargs = { kwarg : resources[ kwarg ] for kwarg in kwargs }
+  function = eval(f'api.{function_str}')
+  function_kwargs = {kwarg: resources[kwarg] for kwarg in kwargs}
 
-  function( **function_kwargs )
+  function(**function_kwargs)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#

@@ -7,6 +7,8 @@
 
 import json
 from urllib.parse import quote
+from typing import Tuple, Optional, List
+import time
 
 import requests
 
@@ -23,7 +25,7 @@ NEW_USER_API_URL = 'https://api.odysee.com/user/new'
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def make_request(request, kwargs):
+def make_request(request: str, kwargs: dict) -> requests.Response:
 
     """Wrapper for retrying request multiple times.
     """
@@ -32,12 +34,24 @@ def make_request(request, kwargs):
         msg = f'`request` argument must be either `requests.get` or `requests.post`, not {type(request)}'
         raise ValueError(msg)
 
-    n_retries = 0
-    response = request(**kwargs)
+    if 'timeout' not in kwargs:
+        kwargs['timeout'] = 15
 
-    while response.status_code != 200 and n_retries < 5:
-        n_retries += 1
-        response = request(**kwargs)
+    n_retries = 0
+
+    response = requests.Response()
+    response.status_code = 418
+
+    while n_retries < 5:
+        time.sleep(2 ** n_retries - 1)
+        try:
+            response = request(**kwargs)
+            if response.status_code == 200:
+                return response
+            else:
+                n_retries += 1
+        except Exception:
+            n_retries += 1            
 
     if response.status_code != 200:
         msg = f'Maximum number of retries reached for request {request} with kwargs {kwargs}: status code {response.status_code}'
@@ -47,9 +61,12 @@ def make_request(request, kwargs):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_auth_token():
+def get_auth_token() -> str:
 
-    """Get a fresh authorization token, to use for API calls that require it. 
+    """Get a fresh authorization token, to use for API calls that require it.
+
+    Note: calling this function many times in quick succession may result in a 
+    503 error. 
     """
 
     response = make_request(
@@ -63,7 +80,7 @@ def get_auth_token():
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_channel_info(channel_name):
+def get_channel_info(channel_name: str) -> dict:
 
     """Get the channel information and ID from the channel name. 
     """
@@ -99,7 +116,7 @@ def get_channel_info(channel_name):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_subscribers(channel_id, auth_token = None):
+def get_subscribers(channel_id: str, auth_token: str = None) -> int:
 
     """Get the number of subscribers for a channel.  
     """
@@ -124,19 +141,19 @@ def get_subscribers(channel_id, auth_token = None):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_all_videos(channel_id):
+def get_raw_video_info_list(channel_id: str) -> dict:
 
     """Get a list of all videos posted by a specified channel name. 
 
     Returns
     -------
-    all_videos: list<dict>
+    raw_video_info_list: list<dict>
         List of dictionaries, with each dict corresponding to a JSON response 
         containing data about a single video.
 
     """
 
-    all_videos = []
+    raw_video_info_list = []
 
     page = 1
 
@@ -164,14 +181,14 @@ def get_all_videos(channel_id):
         if not videos:
             break
         else:
-            all_videos.extend(videos)
+            raw_video_info_list.extend(videos)
             page += 1
 
-    return all_videos
+    return raw_video_info_list
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_views(video_id, auth_token = None):
+def get_views(video_id: str, auth_token: str = None) -> int:
 
     """Get the number of views for a given video.
     """
@@ -195,7 +212,7 @@ def get_views(video_id, auth_token = None):
     
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_video_reactions(video_id, auth_token = None):
+def get_video_reactions(video_id: str, auth_token: str = None) -> Tuple[Optional[int], Optional[int]]:
 
     """Get all reactions for a given video.  
     """
@@ -223,7 +240,7 @@ def get_video_reactions(video_id, auth_token = None):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_all_comments(video_id):
+def get_all_comments(video_id: str) -> List[dict]:
 
     """Get a list of all comments for a single video. 
 
@@ -277,7 +294,7 @@ def get_all_comments(video_id):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def append_comment_reactions(comment_info_list):
+def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
     
     """Get reaction data for each comment and insert ``'reactions'`` key into 
     dict for each comment.
@@ -325,7 +342,7 @@ def append_comment_reactions(comment_info_list):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_recommended(video_title, video_id):
+def get_recommended(video_title: str, video_id: str) -> List[dict]:
     
     name = quote(video_title)
 
@@ -350,7 +367,7 @@ def get_recommended(video_title, video_id):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def normalized_name_to_video_info(normalized_name):
+def normalized_name_to_video_info(normalized_name: str) -> dict:
 
     video_url = f"lbry://{normalized_name}"
     
@@ -372,7 +389,7 @@ def normalized_name_to_video_info(normalized_name):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_streaming_url(canonical_url):
+def get_streaming_url(canonical_url: str) -> str:
     
     json_data = {
         "jsonrpc":"2.0",
