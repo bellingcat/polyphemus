@@ -7,7 +7,8 @@
 
 import json
 from urllib.parse import quote
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Callable
+
 import time
 
 import requests
@@ -25,7 +26,7 @@ NEW_USER_API_URL = 'https://api.odysee.com/user/new'
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def make_request(request: str, kwargs: dict) -> requests.Response:
+def make_request(request: Callable, kwargs: dict) -> requests.Response:
 
     """Wrapper for retrying request multiple times.
     """
@@ -42,6 +43,9 @@ def make_request(request: str, kwargs: dict) -> requests.Response:
     response = requests.Response()
     response.status_code = 418
 
+    exceptions = []
+    status_codes = []
+
     while n_retries < 5:
         time.sleep(2 ** n_retries - 1)
         try:
@@ -49,15 +53,14 @@ def make_request(request: str, kwargs: dict) -> requests.Response:
             if response.status_code == 200:
                 return response
             else:
+                status_codes.append(response.status_code)
                 n_retries += 1
-        except Exception:
+        except Exception as exception:
+            exceptions.append(exception)
             n_retries += 1            
 
-    if response.status_code != 200:
-        msg = f'Maximum number of retries reached for request {request} with kwargs {kwargs}: status code {response.status_code}'
-        raise ValueError(msg)
-
-    return response
+    msg = f'Maximum number of retries reached for request {request} with kwargs {kwargs}. Status codes: {status_codes}; exceptions: {exceptions}'
+    raise ValueError(msg)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
@@ -359,8 +362,7 @@ def get_recommended(video_title: str, video_id: str) -> List[dict]:
             'params': params})
 
     result = json.loads(response.text)
-    
-    recommended_video_info = [ normalized_name_to_video_info(r['name']) for r in result]
+    recommended_video_info = normalized_names_to_video_info([r['name'] for r in result])
     recommended_video_info = [vi for vi in recommended_video_info if ((vi.get('value_type') == 'stream') & any(key in vi.get('value', []) for key in ('video', 'audio')))]
 
     return recommended_video_info
@@ -386,6 +388,28 @@ def normalized_name_to_video_info(normalized_name: str) -> dict:
     result = json.loads(response.text)
     
     return result['result'][video_url]
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+def normalized_names_to_video_info(normalized_names: List[str]) -> dict:
+
+    video_urls = [f"lbry://{normalized_name}" for normalized_name in normalized_names]
+    
+    json_data = {
+        "jsonrpc":"2.0",
+        "method":"resolve",
+        "params":{
+            "urls":video_urls}}
+
+    response = make_request(
+        request = requests.post,
+        kwargs = {
+            'url' : BACKEND_API_URL, 
+            'json': json_data})
+
+    result = json.loads(response.text)
+    
+    return [result['result'][video_url] for video_url in video_urls]
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 

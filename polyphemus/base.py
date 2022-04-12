@@ -29,13 +29,13 @@ class Channel:
 @dataclass
 class Video:
     canonical_url: str
-    streaming_url: str
     type: str
     claim_id: str
     created: datetime
     title: str
-    views: int
     raw: str
+    views: typing.Optional[int] = None
+    streaming_url: typing.Optional[str] = None
     text: typing.Optional[str] = None
     thumbnail : typing.Optional[str] = None
     channel_id: typing.Optional[str] = None
@@ -83,6 +83,9 @@ class OdyseeChannelScraper:
 
     def get_entity(self) -> Channel:
 
+        """Return Channel object containing information about the specified channel.
+        """
+
         subscribers = api.get_subscribers(
             channel_id = self._channel_id,
             auth_token = self.auth_token)
@@ -101,7 +104,7 @@ class OdyseeChannelScraper:
 
     def get_all_videos(self) -> typing.Generator[Video, None, None]:
 
-        """Return list of Video objects for all videos posted by the channel
+        """Return list of Video objects for all videos posted by the specified channel
         """
 
         raw_video_info_list = api.get_raw_video_info_list(channel_id=self._channel_id)
@@ -130,7 +133,7 @@ class OdyseeChannelScraper:
     
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def process_raw_video_info(raw_video_info: dict, auth_token = None) -> Video:
+def process_raw_video_info(raw_video_info: dict, auth_token: str = None, additional_fields: bool = True) -> Video:
 
     if auth_token is None:
         auth_token = api.get_auth_token()
@@ -180,16 +183,21 @@ def process_raw_video_info(raw_video_info: dict, auth_token = None) -> Video:
     
     # Retrieve additional fields
     #.....................................................................#
-    
+
     claim_id = raw_video_info['claim_id']
 
-    views = api.get_views(video_id=claim_id, auth_token = auth_token)
+    if additional_fields:
+        streaming_url = api.get_streaming_url(raw_video_info['canonical_url'])
+        views = api.get_views(video_id=claim_id, auth_token = auth_token)
+        likes, dislikes = api.get_video_reactions(
+            video_id = claim_id,
+            auth_token = auth_token)
 
-    likes, dislikes = api.get_video_reactions(
-        video_id = claim_id,
-        auth_token = auth_token)
-
-    streaming_url = api.get_streaming_url(raw_video_info['canonical_url'])
+    else:
+        streaming_url = None
+        views = None
+        likes = None
+        dislikes = None
 
     # Return Video object
     #.....................................................................#
