@@ -427,7 +427,7 @@ def get_streaming_url(canonical_url: str) -> str:
             'url' : BACKEND_API_URL, 
             'json': json_data})
 
-    video_url = json.loads(response.text)['result'].get('streaming_url')
+    video_url = json.loads(response.text).get('result', {}).get('streaming_url')
 
     return video_url
 

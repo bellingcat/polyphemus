@@ -10,6 +10,7 @@ from urllib.parse import unquote
 from dataclasses import dataclass
 import typing
 from datetime import datetime 
+from collections import Counter
 
 from polyphemus import api
 
@@ -102,13 +103,13 @@ class OdyseeChannelScraper:
         
     #-------------------------------------------------------------------------#
 
-    def get_all_videos(self) -> typing.Generator[Video, None, None]:
+    def get_all_videos(self, additional_fields: bool = True) -> typing.Generator[Video, None, None]:
 
         """Return list of Video objects for all videos posted by the specified channel
         """
 
         raw_video_info_list = api.get_raw_video_info_list(channel_id=self._channel_id)
-        videos = (process_raw_video_info(raw_video_info, self.auth_token) for raw_video_info in raw_video_info_list)
+        videos = (process_raw_video_info(raw_video_info = raw_video_info, auth_token = self.auth_token, additional_fields = additional_fields) for raw_video_info in raw_video_info_list)
         
         return videos
 
@@ -140,6 +141,10 @@ def process_raw_video_info(raw_video_info: dict, auth_token: str = None, additio
     else:
         auth_token = auth_token
 
+    raw = json.dumps(raw_video_info)
+
+    claim_id = raw_video_info['claim_id']
+
     # Handle edge cases
     #.....................................................................#
 
@@ -152,8 +157,12 @@ def process_raw_video_info(raw_video_info: dict, auth_token: str = None, additio
     elif 'claim_hash' in raw_video_info['value']:
         video_type = 'repost'
         duration = None
-        raw_video_info['value'] = raw_video_info['reposted_claim']['value']
-        raw_video_info['canonical_url'] = raw_video_info['reposted_claim']['canonical_url']
+        if 'reposted_claim' in raw_video_info:
+            raw_video_info['value'] = raw_video_info['reposted_claim']['value']
+            raw_video_info['canonical_url'] = raw_video_info['reposted_claim']['canonical_url']
+            claim_id = raw_video_info['reposted_claim']['claim_id']
+        else:
+            raw_video_info['value'] = {}
     elif 'image' in raw_video_info['value']:
         video_type = 'image'
         duration = None
@@ -184,10 +193,11 @@ def process_raw_video_info(raw_video_info: dict, auth_token: str = None, additio
     # Retrieve additional fields
     #.....................................................................#
 
-    claim_id = raw_video_info['claim_id']
-
     if additional_fields:
-        streaming_url = api.get_streaming_url(raw_video_info['canonical_url'])
+        if raw_video_info['name'] == 'live':
+            streaming_url = None
+        else:
+            streaming_url = api.get_streaming_url(raw_video_info['canonical_url'])
         views = api.get_views(video_id=claim_id, auth_token = auth_token)
         likes, dislikes = api.get_video_reactions(
             video_id = claim_id,
@@ -212,11 +222,11 @@ def process_raw_video_info(raw_video_info: dict, auth_token: str = None, additio
         text = raw_video_info['value'].get('description'),
         languages = raw_video_info['value'].get('languages'),
         tags = raw_video_info['value'].get('tags',[]),
-        title = raw_video_info['value']['title'],
+        title = raw_video_info['value'].get('title'),
         duration = duration,
         thumbnail = thumbnail,
         is_comment = False,
-        raw = json.dumps(raw_video_info),
+        raw = raw,
         views = views,
         likes = likes,
         dislikes = dislikes,
@@ -253,5 +263,69 @@ def get_recommended(video: Video, auth_token: str = None) -> typing.List['Video'
     recommended_videos = [process_raw_video_info(raw_video_info, auth_token) for raw_video_info in recommended_video_info_list]
 
     return recommended_videos
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+class RecommendationEngine:
+
+    #-------------------------------------------------------------------------#
+    
+    def __init__(self, channel_list):
+        
+        self.channel_list = channel_list
+        self.auth_token = api.get_auth_token()
+        
+        self.edge_list = []
+        self.new_videos = []
+        
+        self.already_done_claim_ids = []
+        self.claim_id_to_video = {}
+
+    #-------------------------------------------------------------------------#
+
+    def generate(self, iterations = 1):
+        
+        for channel_name in self.channel_list:
+            print(channel_name)
+            scraper = OdyseeChannelScraper(channel_name = channel_name, auth_token = self.auth_token)
+            
+            self.new_videos.extend(list(scraper.get_all_videos(additional_fields = False)))
+            
+        self.claim_id_to_video = dict(zip([v.claim_id for v in self.new_videos], self.new_videos))
+        
+        for iteration in range(int(iterations)):
+
+            for i, video in enumerate(self.new_videos):
+                claim_id = video.claim_id
+                title = video.title
+
+                print(f'ITERATION: {iteration} | VIDEO: {i} / {len(self.new_videos)} | CLAIM_ID: {claim_id}')
+
+                recommended_video_info = api.get_recommended(video_title = title, video_id = claim_id)
+
+                for rec_video_info in recommended_video_info:
+                    rec_claim_id = rec_video_info['claim_id']
+
+                    self.edge_list.append((claim_id, rec_claim_id))
+
+                    if rec_video_info['claim_id'] not in self.claim_id_to_video:
+                        
+                        self.claim_id_to_video[rec_claim_id] = process_raw_video_info(
+                            raw_video_info = rec_video_info,
+                            auth_token = self.auth_token,
+                            additional_fields = False)
+
+                self.already_done_claim_ids.append(claim_id)
+
+            self.new_videos = [video for video in self.claim_id_to_video.values() if video.claim_id not in self.already_done_claim_ids]
+            
+        claim_id_to_channel = {claim_id : video.channel_name for claim_id, video in self.claim_id_to_video.items()}
+        _channel_edge_list = [(claim_id_to_channel[target], claim_id_to_channel[source]) for target, source in self.edge_list]
+        channel_edge_list = [(source, target) for source, target in _channel_edge_list if all(item is not None for item in (source, target))]
+
+        c = Counter(channel_edge_list)
+        self.weighted_edge_list = [(source, target, weight) for (source, target), weight in c.most_common()]
+        
+        return self.weighted_edge_list, self.claim_id_to_video
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
