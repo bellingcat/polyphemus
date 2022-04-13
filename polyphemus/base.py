@@ -238,7 +238,7 @@ def process_raw_comment_info(raw_comment_info: dict) -> Comment:
 
     return Comment(
         text = raw_comment_info['comment'],
-        created = raw_comment_info['timestamp'],
+        created = datetime.fromtimestamp(int(raw_comment_info['timestamp'])),
         claim_id = raw_comment_info.get('comment_id'),
         video_claim_id = raw_comment_info['claim_id'],
         channel_id = raw_comment_info['channel_id'],
