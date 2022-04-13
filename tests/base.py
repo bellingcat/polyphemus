@@ -51,3 +51,14 @@ def test_process_raw_comment_info(resources):
     base.process_raw_comment_info(raw_comment_info = resources['full_comment_info'])
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+class TestRecommendationEngine:
+
+    @pytest.fixture(autouse=True)
+    def test_simple_init(self, resources):
+        self.engine = base.RecommendationEngine(channel_list = [resources['channel_name']])
+
+    def test_generate(self):
+        self.engine.generate(iterations = 1)
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#

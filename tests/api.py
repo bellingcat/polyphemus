@@ -28,10 +28,9 @@ KWARGS_LIST = [
     ('get_video_reactions', ['video_id', 'auth_token']),
     ('get_all_comments', ['video_id']),
     ('append_comment_reactions', ['comment_info_list']),
-    ('normalized_name_to_video_info', ['normalized_name']),
+    ('get_recommended', ['video_title', 'video_id']),
     ('normalized_names_to_video_info', ['normalized_names']),
-    ('get_streaming_url', ['canonical_url']),
-    ('get_recommended', ['video_title', 'video_id']),]
+    ('get_streaming_url', ['canonical_url']),]
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 

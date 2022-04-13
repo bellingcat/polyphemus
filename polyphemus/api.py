@@ -24,11 +24,33 @@ COMMENT_API_URL = 'https://comments.odysee.com/api/v2'
 RECOMMENDATION_API_URL = 'https://recsys.odysee.com/search'
 NEW_USER_API_URL = 'https://api.odysee.com/user/new'
 
+# Allow responses to `get_streaming_url` that contain no `streaming_url` field
+ALLOWED_ERROR_CODES = [-32603]
+
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 def make_request(request: Callable, kwargs: dict) -> requests.Response:
 
-    """Wrapper for retrying request multiple times.
+    """Wrapper for retrying request multiple times and handling errors.
+
+    This function handles Python exceptions (e.g. HTTPConnectionPool), 
+    unsuccessful HTTP error codes (e.g. 429, 403), and errors in the 
+    JSON response. If after 5 retries (using exponential backoff) the request 
+    is unsuccessful, an exception is raised. 
+
+    Parameters
+    ----------
+    request: function
+        The requests function to be called.
+        One of {requests.get and requests.post}
+    kwargs: dict
+        Keyword arguments for the ``request`` function. Must include ``url`` key.
+        e.g. ``{'url': 'https://api.odysee.com/user/new'}``
+        Uses a default timeout of 15 seconds.
+
+    Returns
+    -------
+    response: requests.Response
     """
 
     if request not in [requests.get, requests.post]:
@@ -43,23 +65,33 @@ def make_request(request: Callable, kwargs: dict) -> requests.Response:
     response = requests.Response()
     response.status_code = 418
 
-    exceptions = []
-    status_codes = []
+    retry_reasons = []
 
+    # TODO this looks a bit gross, try to refactor
     while n_retries < 5:
         time.sleep(2 ** n_retries - 1)
         try:
             response = request(**kwargs)
             if response.status_code == 200:
-                return response
+                parsed_response = json.loads(response.text)
+                if isinstance(parsed_response, list):
+                    return response
+                if parsed_response.get('error') is not None:
+                    if parsed_response['error'].get('code', None) not in ALLOWED_ERROR_CODES:
+                        retry_reasons.append(f'JSON response error: {parsed_response["error"]}')
+                        n_retries += 1
+                    else:
+                        return response
+                else:
+                    return response
             else:
-                status_codes.append(response.status_code)
+                retry_reasons.append(f'HTTP status code: {response.status_code}')
                 n_retries += 1
         except Exception as exception:
-            exceptions.append(exception)
+            retry_reasons.append(f'Python exception: {exception}')
             n_retries += 1            
 
-    msg = f'Maximum number of retries reached for request {request} with kwargs {kwargs}. Status codes: {status_codes}; exceptions: {exceptions}'
+    msg = f'Maximum number of retries reached for request {request} with kwargs {kwargs}. Retry reasons: {retry_reasons}'
     raise ValueError(msg)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
@@ -148,6 +180,19 @@ def get_raw_video_info_list(channel_id: str) -> dict:
 
     """Get a list of all videos posted by a specified channel name. 
 
+    Odysee's ``claim_search`` API (which is used on the browser and LBRY 
+    desktop app) only allows up to 1000 videos to be fetched for a single value 
+    of the ``release_time`` parameter. You can check this by going to an Odysee 
+    channel with a lot of videos (e.g. @etresouverain) and holding the 
+    "Page Down" button until you reach the bottom, there will only be 1000 
+    videos. 
+    
+    This function loops over all pages for a single ``release_time`` and 
+    fetches the raw video info for all videos until it reaches that 1000 video 
+    limit, then uses the minimum of the ``creation_timestamp`` for all videos 
+    as the new ``release_time``, and starts over looping over all pages for 
+    that new ``release_time``. 
+
     Returns
     -------
     raw_video_info_list: list<dict>
@@ -156,9 +201,10 @@ def get_raw_video_info_list(channel_id: str) -> dict:
 
     """
 
-    raw_video_info_list = []
-
+    claim_id_to_raw_video_info = {}
     page = 1
+    release_time = int(time.time()) + 86400
+    hit_video_limit = False
 
     while True:
 
@@ -169,7 +215,8 @@ def get_raw_video_info_list(channel_id: str) -> dict:
                 "page_size":30,
                 "page":page,
                 "order_by":["release_time"],
-                "channel_ids":[channel_id]}}
+                "channel_ids":[channel_id],
+                "release_time": f"<{release_time}"}}
 
         response = make_request(
             request = requests.post,
@@ -180,14 +227,30 @@ def get_raw_video_info_list(channel_id: str) -> dict:
         result = json.loads(response.text)
 
         videos = result['result']['items']
+        new_videos = {video['claim_id'] : video for video in videos if video['claim_id'] not in claim_id_to_raw_video_info}
 
-        if not videos:
-            break
+        if len(new_videos) == 0:
+            # if there are no new videos that haven't already been scraped
+            if hit_video_limit:
+                # if Odysee's limit of 1000 videos for a given timestamp was 
+                # reached (which updates the `release_time`) on the last 
+                # request, this means we have scraped all videos on the channel, 
+                # so we break the loop.
+                break
+            else:
+                # we have hit Odysee's limit of 1000 videos for a given 
+                # timestamp, so we update `release_time` and reset `page`
+                hit_video_limit = True
+                release_time = min([raw_video_info['meta']['creation_timestamp'] for raw_video_info in claim_id_to_raw_video_info.values()], default = 0)
+                page = 1
         else:
-            raw_video_info_list.extend(videos)
+            # there were unscraped videos from the last request, so we keep 
+            # going in the loop and increment the `page` variable
+            claim_id_to_raw_video_info.update(new_videos)
             page += 1
+            hit_video_limit = False
 
-    return raw_video_info_list
+    return list(claim_id_to_raw_video_info.values())
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
@@ -346,6 +409,10 @@ def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 def get_recommended(video_title: str, video_id: str) -> List[dict]:
+
+    """Get list of raw video info dicts for a specified video title and video 
+    claim_id.
+    """
     
     name = quote(video_title)
 
@@ -369,29 +436,16 @@ def get_recommended(video_title: str, video_id: str) -> List[dict]:
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def normalized_name_to_video_info(normalized_name: str) -> dict:
-
-    video_url = f"lbry://{normalized_name}"
-    
-    json_data = {
-        "jsonrpc":"2.0",
-        "method":"resolve",
-        "params":{
-            "urls":[video_url]}}
-
-    response = make_request(
-        request = requests.post,
-        kwargs = {
-            'url' : BACKEND_API_URL, 
-            'json': json_data})
-
-    result = json.loads(response.text)
-    
-    return result['result'][video_url]
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
 def normalized_names_to_video_info(normalized_names: List[str]) -> dict:
+
+    """Convert a list of normalized names of videos to a list of raw video dicts for those videos. Example of a "normalized name" is:
+
+        ``'si-une-tude-montre-que-le-masque-permet'``, 
+    
+    corresponding to the video:
+    
+        ``https://odysee.com/@filsdepangolin#e/si-une-tude-montre-que-le-masque-permet#e``.
+    """
 
     video_urls = [f"lbry://{normalized_name}" for normalized_name in normalized_names]
     
@@ -414,6 +468,9 @@ def normalized_names_to_video_info(normalized_names: List[str]) -> dict:
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 def get_streaming_url(canonical_url: str) -> str:
+
+    """Retrieve the `streaming_url` for a specified video.
+    """
     
     json_data = {
         "jsonrpc":"2.0",
