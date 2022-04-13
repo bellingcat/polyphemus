@@ -41,12 +41,6 @@ def test_process_raw_video_info(resources):
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def test_get_recommended(resources):
-    video = base.process_raw_video_info(raw_video_info = resources['full_video_info'], auth_token = resources['auth_token'])
-    base.get_recommended(video = video)
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
 def test_process_raw_comment_info(resources):
     base.process_raw_comment_info(raw_comment_info = resources['full_comment_info'])
 

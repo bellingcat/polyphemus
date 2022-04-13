@@ -251,21 +251,6 @@ def process_raw_comment_info(raw_comment_info: dict) -> Comment:
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-def get_recommended(video: Video, auth_token: str = None) -> typing.List['Video']:
-
-    if auth_token is None:
-        auth_token = api.get_auth_token()
-    else:
-        auth_token = auth_token
-    
-    recommended_video_info_list = api.get_recommended(
-        video_title=video.title, video_id=video.claim_id)
-    recommended_videos = [process_raw_video_info(raw_video_info, auth_token) for raw_video_info in recommended_video_info_list]
-
-    return recommended_videos
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
 class RecommendationEngine:
 
     #-------------------------------------------------------------------------#
