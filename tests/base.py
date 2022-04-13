@@ -19,38 +19,40 @@ from polyphemus import base
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-class TestOdyseeChannel:
+class TestOdyseeChannelScraper:
 
     @pytest.fixture(autouse=True)
     def test_simple_init(self, resources):
-        self.channel = base.OdyseeChannel(channel_name = resources['channel_name'])
+        self.scraper = base.OdyseeChannelScraper(channel_name = resources['channel_name'])
+
+    def test_get_entity(self):
+        self.scraper.get_entity()
 
     def test_get_all_videos(self):
-        self.channel.get_all_videos()
+        self.scraper.get_all_videos()
 
     def test_get_all_videos_and_comments(self):
-        self.channel.get_all_videos_and_comments()
+        self.scraper.get_all_videos_and_comments()
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-class TestOdyseeVideo:
+def test_process_raw_video_info(resources):
+    video = base.process_raw_video_info(raw_video_info = resources['full_video_info'], auth_token = resources['auth_token'])
 
-    @pytest.fixture(autouse=True)
-    def test_simple_init(self, resources):
-        self.video = base.OdyseeVideo(full_video_info = resources['full_video_info'])
-
-    def test_get_all_comments(self):
-        self.video.get_all_comments()
-
-    def test_get_recommended(self):
-        self.video.get_recommended()
-        
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-class TestOdyseeComment:
+def test_process_raw_comment_info(resources):
+    base.process_raw_comment_info(raw_comment_info = resources['full_comment_info'])
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+class TestRecommendationEngine:
 
     @pytest.fixture(autouse=True)
     def test_simple_init(self, resources):
-        self.comment = base.OdyseeComment(full_comment_info = resources['full_comment_info'])
+        self.engine = base.RecommendationEngine(channel_list = [resources['channel_name']])
+
+    def test_generate(self):
+        self.engine.generate(iterations = 1)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#

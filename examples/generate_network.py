@@ -6,61 +6,39 @@ from pathlib import Path
 import pickle
 import os
 
+import networkx as nx
+
 import polyphemus
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 CHANNEL_NAME = 'PatriotFront'
 
-ITERATIONS = 3
+ITERATIONS = 2
 
-OUTPUT_DIR = '../../data'
+OUTPUT_DIR = Path('../../data', f'{CHANNEL_NAME}_recommendation_iterations={ITERATIONS}')
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 if __name__ == '__main__':
 
-    odysee_channel = polyphemus.base.OdyseeChannel(channel_name = CHANNEL_NAME)
+    engine = polyphemus.base.RecommendationEngine(channel_list= [CHANNEL_NAME])
 
-    edge_list = list()
-    already_done = list()
+    weighted_edge_list, claim_id_to_video = engine.generate(iterations = 1)
 
-    new_videos = odysee_channel.get_all_videos()
-    master_video_dict = dict(zip([v.info['claim_id'] for v in new_videos], new_videos))
-
-    for iteration in range(ITERATIONS):
-        
-        print(f'\n\nITERATION: {iteration}, N_VIDEOS: {len(new_videos)}\n\n')
-
-        for i, video in enumerate(new_videos):
-            claim_id = video.info['claim_id']
-            title = video.info['title']
-
-            print(f'\nVIDEO: {i}; CLAIM_ID: {claim_id}\n')
-
-            recommended_video_info = polyphemus.api.get_recommended(title, claim_id)
-
-            for rec_video_info in recommended_video_info:
-                rec_claim_id = rec_video_info['claim_id']
-                print(f'REC_CLAIM_ID: {rec_claim_id}')
-
-                edge_list.append((claim_id, rec_claim_id))
-
-                if rec_video_info['claim_id'] not in master_video_dict:
-                    master_video_dict[rec_claim_id] = polyphemus.base.OdyseeVideo(rec_video_info)
-
-            already_done.append(claim_id)
-
-        new_videos = [video for video in master_video_dict.values() if video.info['claim_id'] not in already_done]
+    G = nx.DiGraph()
+    G.add_weighted_edges_from(weighted_edge_list)
 
     #-------------------------------------------------------------------------#
 
     os.makedirs(OUTPUT_DIR, exist_ok = True)
 
-    with open(Path(OUTPUT_DIR, 'master_video_dict.pkl'), 'wb') as f:
-        pickle.dump(master_video_dict, f)
+    nx.write_gexf(G = G, path = Path(OUTPUT_DIR, 'network.gexf'))
 
-    with open(Path(OUTPUT_DIR, 'edge_list.pkl'), 'wb') as f:
-        pickle.dump(edge_list)
+    with open(Path(OUTPUT_DIR, f'weighted_edge_list.pkl'), 'wb') as f:
+        pickle.dump(weighted_edge_list, f)
+
+    with open(Path(OUTPUT_DIR, f'claim_id_to_video.pkl'), 'wb') as f:
+        pickle.dump(claim_id_to_video, f)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#

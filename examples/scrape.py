@@ -11,7 +11,7 @@ import os
 
 import pandas as pd
 
-from polyphemus.base import OdyseeChannel
+from polyphemus.base import OdyseeChannelScraper
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
@@ -22,13 +22,13 @@ OUTPUT_DIR = Path('.').resolve().parents[1]/'data'
 
 if __name__ == '__main__':
 
-    odysee_channel = OdyseeChannel(channel_name = CHANNEL_NAME)
+    odysee_channel = OdyseeChannelScraper(channel_name = CHANNEL_NAME)
 
     video_list, comment_list = odysee_channel.get_all_videos_and_comments()
 
-    channel_df = pd.DataFrame([odysee_channel.info])
-    video_df = pd.DataFrame([v.info for v in video_list])
-    comment_df = pd.DataFrame([c.info for c in comment_list])
+    channel_df = pd.DataFrame([odysee_channel.get_entity().__dict__])
+    video_df = pd.DataFrame([v.__dict__ for v in video_list])
+    comment_df = pd.DataFrame([c.__dict__ for c in comment_list])
 
     output_subdir = Path(OUTPUT_DIR, CHANNEL_NAME)
     os.makedirs(output_subdir, exist_ok = True)
