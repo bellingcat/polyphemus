@@ -68,7 +68,7 @@ def make_request(request: Callable, kwargs: dict) -> requests.Response:
     retry_reasons = []
 
     # TODO this looks a bit gross, try to refactor
-    while n_retries < 5:
+    while n_retries < 10:
         time.sleep(2 ** n_retries - 1)
         try:
             response = request(**kwargs)

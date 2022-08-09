@@ -218,7 +218,7 @@ def process_raw_video_info(raw_video_info: dict, auth_token: str = None, additio
         channel_id = channel_id,
         channel_name = channel_name,
         claim_id = raw_video_info['claim_id'],
-        created = datetime.fromtimestamp(int(created)),
+        created = datetime.fromtimestamp(max(int(created), 0)),
         text = raw_video_info['value'].get('description'),
         languages = raw_video_info['value'].get('languages'),
         tags = raw_video_info['value'].get('tags',[]),
@@ -269,14 +269,15 @@ class RecommendationEngine:
     #-------------------------------------------------------------------------#
 
     def generate(self, iterations = 1):
-        
-        for channel_name in self.channel_list:
-            print(channel_name)
-            scraper = OdyseeChannelScraper(channel_name = channel_name, auth_token = self.auth_token)
-            
-            self.new_videos.extend(list(scraper.get_all_videos(additional_fields = False)))
-            
-        self.claim_id_to_video = dict(zip([v.claim_id for v in self.new_videos], self.new_videos))
+
+        if not self.new_videos:
+            for channel_name in self.channel_list:
+                print(channel_name)
+                scraper = OdyseeChannelScraper(channel_name = channel_name, auth_token = self.auth_token)
+                
+                self.new_videos.extend(list(scraper.get_all_videos(additional_fields = False)))
+                
+            self.claim_id_to_video.update(dict(zip([v.claim_id for v in self.new_videos], self.new_videos)))
         
         for iteration in range(int(iterations)):
 
@@ -311,6 +312,15 @@ class RecommendationEngine:
         c = Counter(channel_edge_list)
         self.weighted_edge_list = [(source, target, weight) for (source, target), weight in c.most_common()]
         
-        return self.weighted_edge_list, self.claim_id_to_video
+        usernames = set([channel.strip('@') for edge in self.weighted_edge_list for channel in edge[:2]])
+
+        self.channels = {}
+        for username in usernames:
+            try:
+                self.channels['@' + username] = OdyseeChannelScraper(channel_name = username, auth_token=self.auth_token).get_entity().__dict__
+            except KeyError:
+                pass
+
+        return self.weighted_edge_list, self.channels, self.claim_id_to_video
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#

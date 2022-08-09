@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     engine = polyphemus.base.RecommendationEngine(channel_list= [CHANNEL_NAME])
 
-    weighted_edge_list, claim_id_to_video = engine.generate(iterations = 1)
+    weighted_edge_list, channels, claim_id_to_video = engine.generate(iterations = ITERATIONS)
 
     G = nx.DiGraph()
     G.add_weighted_edges_from(weighted_edge_list)
