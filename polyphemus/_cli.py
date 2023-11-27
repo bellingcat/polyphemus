@@ -169,16 +169,19 @@ def main():
                 # Display usage if one or more expected arguments are missing.
                 create_parser().print_usage()
                 return
-            # Running the profiler
+
+            # Initializing the profiler
             profiler = cProfile.Profile()
             profiler.enable()
 
-            # Call the function with prepared arguments.
+            # Executing the function asynchronously and profiling its performance.
             call_function = asyncio.run(function(**kwargs))
             pprint(call_function)
 
+            # Stopping the profiler and printing the stats
             profiler.disable()
             stats = pstats.Stats(profiler)
+            # Sorting and printing the top 10 time-consuming functions
             stats.sort_stats("cumulative").print_stats(10)
 
         else:
