@@ -3,6 +3,8 @@
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 import argparse
 import asyncio
+import cProfile
+import pstats
 from pprint import pprint
 
 from . import api
@@ -111,36 +113,37 @@ def create_parser() -> argparse.ArgumentParser:
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+# Mapping of functions to their respective command-line arguments.
+arguments_mapping: dict = {
+    "channel": {
+        "profile": (api.get_channel_info, ["channel_name"]),
+        "videos": (api.get_raw_video_info_list, ["channel_id"]),
+        "subscribers": (api.get_subscribers, ["channel_id"]),
+    },
+    "video": {
+        "views": (api.get_views, ["claim_id"]),
+        "comments": (api.get_all_comments, ["claim_id"]),
+        "reactions": (api.get_video_reactions, ["claim_id"]),
+        "streaming_url": (api.get_streaming_url, ["canonical_url"]),
+        "recommended_videos": (api.get_recommended, ["video_title", "claim_id"]),
+    },
+    "misc": {
+        "append_comments_reactions": (
+            api.append_comment_reactions,
+            ["comments_list"],
+        ),
+        "normalized_names2video_info": (
+            api.normalized_names_to_video_info,
+            ["normalized_names"],
+        ),
+    },
+}
 
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 def main():
     """Main entrypoint for polyphemus cli."""
     arguments: argparse = create_parser().parse_args()
-
-    # Mapping of functions to their respective command-line arguments.
-    arguments_mapping: dict = {
-        "channel": {
-            "profile": (api.get_channel_info, ["channel_name"]),
-            "videos": (api.get_raw_video_info_list, ["channel_id"]),
-            "subscribers": (api.get_subscribers, ["channel_id"]),
-        },
-        "video": {
-            "views": (api.get_views, ["claim_id"]),
-            "comments": (api.get_all_comments, ["claim_id"]),
-            "reactions": (api.get_video_reactions, ["claim_id"]),
-            "streaming_url": (api.get_streaming_url, ["canonical_url"]),
-            "recommended_videos": (api.get_recommended, ["video_title", "claim_id"]),
-        },
-        "misc": {
-            "append_comments_reactions": (
-                api.append_comment_reactions,
-                ["comments_list"],
-            ),
-            "normalized_names2video_info": (
-                api.normalized_names_to_video_info,
-                ["normalized_names"],
-            ),
-        },
-    }
 
     try:
         # Validate and execute the command based on user input.
@@ -166,10 +169,18 @@ def main():
                 # Display usage if one or more expected arguments are missing.
                 create_parser().print_usage()
                 return
+            # Running the profiler
+            profiler = cProfile.Profile()
+            profiler.enable()
 
             # Call the function with prepared arguments.
             call_function = asyncio.run(function(**kwargs))
             pprint(call_function)
+
+            profiler.disable()
+            stats = pstats.Stats(profiler)
+            stats.sort_stats("cumulative").print_stats(10)
+
         else:
             # Display usage if arguments.data is not valid.
             create_parser().print_usage()

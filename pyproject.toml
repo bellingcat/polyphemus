@@ -12,7 +12,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-requests = "*"
+aiohttp = "*"
 beautifulsoup4 = "*"
 pandas = "*"
 

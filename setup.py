@@ -26,7 +26,7 @@ setup(
     long_description=readme(),
     author="Bellingcat",
     packages=["polyphemus"],
-    install_requires=["requests", "beautifulsoup4", "pandas"],
+    install_requires=["aiohttp", "beautifulsoup4", "pandas"],
     extras_require={
         "docs": [
             "sphinx >= 3.3.1",
