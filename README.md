@@ -81,4 +81,4 @@ functions
 import polyphemus
 ```
 
-> Code examples are available [here](examples).
+> Library code examples are available [here](examples).
