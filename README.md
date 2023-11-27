@@ -46,19 +46,21 @@ polyphemus -h
 ```
 
 ```commandline
-Usage: polyphemus [-h] {channel,video} ...
+usage: polyphemus [-h] {channel,video,misc} ...
 
 Polyphemus: Scraper for Odysee, an alt-tech platform for sharing video.
 
-Positional Arguments:
-  {channel,video}  init mode
-    channel        channel operations
-    video          video operations
+positional arguments:
+  {channel,video,misc}  target
+    channel             channel operations
+    video               video operations
+    misc                miscellaneous data operations
 
-Options:
-  -h, --help       show this help message and exit
+options:
+  -h, --help            show this help message and exit
 
 Copyright © 2022-2023 Bellingcat. All rights reserved.
+
 ```
 
 #### Examples
@@ -66,13 +68,13 @@ Copyright © 2022-2023 Bellingcat. All rights reserved.
 ##### Get channel profile info
 
 ```commandline
-polyphemus channel --name channel_name --profile
+polyphemus channel profile --name channel_name
 ```
 
 ##### Get video views
 
 ```commandline
-polyphemus video --id claim_id --views
+polyphemus video views --id claim_id
 ```
 
 ### Polyphemus Library

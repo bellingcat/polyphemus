@@ -2,6 +2,7 @@
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 import argparse
+import asyncio
 from pprint import pprint
 
 from . import api
@@ -167,7 +168,8 @@ def main():
                 return
 
             # Call the function with prepared arguments.
-            pprint(function(**kwargs))
+            call_function = asyncio.run(function(**kwargs))
+            pprint(call_function)
         else:
             # Display usage if arguments.data is not valid.
             create_parser().print_usage()

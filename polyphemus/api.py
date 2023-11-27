@@ -5,11 +5,13 @@
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+import asyncio
 import json
 import time
 from typing import Tuple, Optional, List, Callable
 from urllib.parse import quote
 
+import aiohttp
 import requests
 
 # API endpoints for Odysee data
@@ -29,21 +31,20 @@ ALLOWED_ERROR_CODES = [-32603]
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def make_request(request: Callable, kwargs: dict) -> requests.Response:
+async def make_request(request: Callable, kwargs: dict) -> aiohttp.ClientResponse:
     """
-    Wrapper for retrying request multiple times and handling errors.
+    Async wrapper for making HTTP requests with retries and error handling.
 
     Parameters
     ----------
     request : Callable
-        The requests function to be called. One of {requests.get, requests.post}.
+        The aiohttp session method to be called (session.get, session.post).
     kwargs : dict
         Keyword arguments for the `request` function. Must include `url` key.
-        Uses a default timeout of 15 seconds if not provided.
 
     Returns
     -------
-    requests.Response
+    aiohttp.ClientResponse
         The HTTP response received upon a successful request.
 
     Raises
@@ -52,43 +53,47 @@ def make_request(request: Callable, kwargs: dict) -> requests.Response:
         If the maximum number of retries is reached without a successful response.
     """
 
-    if request not in [requests.get, requests.post]:
-        raise ValueError(
-            f"`request` must be `requests.get` or `requests.post`, not {type(request)}"
-        )
-
-    kwargs.setdefault("timeout", 15)
+    # Set a default timeout
+    kwargs.setdefault("timeout", aiohttp.ClientTimeout(total=15))
 
     retry_reasons = []
-    for n_retries in range(10):
-        time.sleep(2**n_retries - 1)
-        try:
-            response = request(**kwargs)
-            if response.status_code == 200:
-                return process_successful_response(response)
-            else:
-                retry_reasons.append(f"HTTP status code: {response.status_code}")
-        except Exception as exception:
-            retry_reasons.append(f"Python exception: {exception}")
 
+    # Retrying the request up to 10 times
+    for n_retries in range(10):
+        # Backoff strategy for retries
+        await asyncio.sleep(2**n_retries - 1)
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.request(request.__name__, **kwargs) as response:
+                    if response.status == 200:
+                        return await process_successful_response(response)
+                    else:
+                        retry_reasons.append(f"HTTP status code: {response.status}")
+            except Exception as exception:
+                retry_reasons.append(f"Python exception: {exception}")
+
+    # If all retries failed, raise an exception
     raise ValueError(
-        f"Maximum number of retries reached for request {request} with kwargs {kwargs}. "
+        f"Maximum number of retries reached for request {request.__name__} with kwargs {kwargs}. "
         f"Retry reasons: {retry_reasons}"
     )
 
 
-def process_successful_response(response: requests.Response) -> requests.Response:
+async def process_successful_response(
+    response: aiohttp.ClientResponse,
+) -> aiohttp.ClientResponse:
     """
-    Process a successful HTTP response.
+    Process a successful HTTP response asynchronously.
 
     Parameters
     ----------
-    response : requests.Response
+    response : aiohttp.ClientResponse
         The successful HTTP response to process.
 
     Returns
     -------
-    requests.Response
+    aiohttp.ClientResponse
         The processed response.
 
     Raises
@@ -96,7 +101,7 @@ def process_successful_response(response: requests.Response) -> requests.Respons
     ValueError
         If the response contains an error not in the ALLOWED_ERROR_CODES.
     """
-    parsed_response = json.loads(response.text)
+    parsed_response = json.loads(await response.text())
     if isinstance(parsed_response, list):
         return response
     if (
@@ -110,16 +115,18 @@ def process_successful_response(response: requests.Response) -> requests.Respons
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_auth_token() -> str:
+async def get_auth_token() -> str:
     """Get a fresh authorization token, to use for API calls that require it.
 
     Note: calling this function many times in quick succession may result in a
     503 error.
     """
 
-    response = make_request(request=requests.post, kwargs={"url": NEW_USER_API_URL})
-
-    auth_token = json.loads(response.text)["data"]["auth_token"]
+    response = await make_request(
+        request=requests.post, kwargs={"url": NEW_USER_API_URL}
+    )
+    response_text = await response.text()
+    auth_token = json.loads(response_text)["data"]["auth_token"]
 
     return auth_token
 
@@ -127,7 +134,7 @@ def get_auth_token() -> str:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_channel_info(channel_name: str) -> dict:
+async def get_channel_info(channel_name: str) -> dict:
     """Get the channel information and ID from the channel name."""
 
     channel_url = f"lbry://@{channel_name}"
@@ -138,11 +145,11 @@ def get_channel_info(channel_name: str) -> dict:
         "params": {"urls": [channel_url]},
     }
 
-    response = make_request(
+    response = await make_request(
         request=requests.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
     )
-
-    result = json.loads(response.text)
+    response_text = await response.text()
+    result = json.loads(response_text)
 
     info = result["result"][channel_url]
 
@@ -153,7 +160,7 @@ def get_channel_info(channel_name: str) -> dict:
         "description": info["value"].get("description"),
         "cover_image": info["value"].get("cover", {}).get("url"),
         "thumbnail_image": info["value"].get("thumbnail", {}).get("url"),
-        "raw": response.text,
+        "raw": response_text,
     }
 
     return info
@@ -162,7 +169,7 @@ def get_channel_info(channel_name: str) -> dict:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_subscribers(channel_id: str, auth_token: str = None) -> int:
+async def get_subscribers(channel_id: str, auth_token: str = None) -> int:
     """Get the number of subscribers for a channel."""
 
     if auth_token is None:
@@ -170,11 +177,12 @@ def get_subscribers(channel_id: str, auth_token: str = None) -> int:
 
     json_data = {"auth_token": auth_token, "claim_id": channel_id}
 
-    response = make_request(
+    response = await make_request(
         request=requests.post, kwargs={"url": SUBSCRIBER_API_URL, "data": json_data}
     )
+    response_text = await response.text()
 
-    result = json.loads(response.text)
+    result = json.loads(response_text)
     subscribers = result["data"][0]
 
     return subscribers
@@ -183,7 +191,7 @@ def get_subscribers(channel_id: str, auth_token: str = None) -> int:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_raw_video_info_list(channel_id: str) -> list:
+async def get_raw_video_info_list(channel_id: str) -> list:
     """Get a list of all videos posted by a specified channel name.
 
     Odysee's ``claim_search`` API (which is used on the browser and LBRY
@@ -225,11 +233,12 @@ def get_raw_video_info_list(channel_id: str) -> list:
             },
         }
 
-        response = make_request(
+        response = await make_request(
             request=requests.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
         )
+        response_text = await response.text()
 
-        result = json.loads(response.text)
+        result = json.loads(response_text)
 
         videos = result["result"]["items"]
         new_videos = {
@@ -271,7 +280,7 @@ def get_raw_video_info_list(channel_id: str) -> list:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_views(video_id: str, auth_token: str = None) -> int:
+async def get_views(video_id: str, auth_token: str = None) -> int:
     """Get the number of views for a given video."""
 
     if auth_token is None:
@@ -279,11 +288,12 @@ def get_views(video_id: str, auth_token: str = None) -> int:
 
     params = {"auth_token": auth_token, "claim_id": video_id}
 
-    response = make_request(
+    response = await make_request(
         request=requests.get, kwargs={"url": VIEW_API_URL, "params": params}
     )
+    response_text = await response.text()
 
-    views = json.loads(response.text)["data"][0]
+    views = json.loads(response_text)["data"][0]
 
     return views
 
@@ -291,7 +301,7 @@ def get_views(video_id: str, auth_token: str = None) -> int:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_video_reactions(
+async def get_video_reactions(
     video_id: str, auth_token: str = None
 ) -> Tuple[Optional[int], Optional[int]]:
     """Get all reactions for a given video."""
@@ -301,11 +311,12 @@ def get_video_reactions(
 
     post_data = {"auth_token": auth_token, "claim_ids": video_id}
 
-    response = make_request(
+    response = await make_request(
         request=requests.post, kwargs={"url": REACTION_API_URL, "data": post_data}
     )
+    response_text = await response.text()
 
-    result = json.loads(response.text)
+    result = json.loads(response_text)
 
     if result["success"]:
         reactions = result["data"]["others_reactions"][video_id]
@@ -317,7 +328,7 @@ def get_video_reactions(
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_all_comments(video_id: str) -> List[dict]:
+async def get_all_comments(video_id: str) -> List[dict]:
     """Get a list of all comments for a single video.
 
     Parameters
@@ -351,17 +362,18 @@ def get_all_comments(video_id: str) -> List[dict]:
             },
         }
 
-        response = make_request(
+        response = await make_request(
             request=requests.post, kwargs={"url": COMMENT_API_URL, "json": json_data}
         )
+        response_text = await response.text()
 
-        result = json.loads(response.text)
+        result = json.loads(response_text)
 
         if "items" not in result["result"]:
             break
         else:
             _comments = result["result"]["items"]
-            comments = append_comment_reactions(comment_info_list=_comments)
+            comments = await append_comment_reactions(comment_info_list=_comments)
             all_comments.extend(comments)
             page += 1
 
@@ -371,7 +383,7 @@ def get_all_comments(video_id: str) -> List[dict]:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
+async def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
     """Get reaction data for each comment and insert ``'reactions'`` key into
     dict for each comment.
 
@@ -400,11 +412,12 @@ def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
         "params": {"comment_ids": comment_ids},
     }
 
-    response = make_request(
+    response = await make_request(
         request=requests.post, kwargs={"url": COMMENT_API_URL, "json": json_data}
     )
+    response_text = await response.text()
 
-    result = json.loads(response.text)
+    result = json.loads(response_text)
 
     reactions = result["result"]["others_reactions"]
 
@@ -418,7 +431,7 @@ def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_recommended(video_title: str, video_id: str) -> List[dict]:
+async def get_recommended(video_title: str, video_id: str) -> List[dict]:
     """Get list of raw video info dicts for a specified video title and video
     claim_id.
     """
@@ -427,18 +440,21 @@ def get_recommended(video_title: str, video_id: str) -> List[dict]:
 
     params = {"s": name, "size": "20", "from": "0", "related_to": video_id}
 
-    response = make_request(
+    response = await make_request(
         request=requests.get, kwargs={"url": RECOMMENDATION_API_URL, "params": params}
     )
+    response_text = await response.text()
 
-    result = json.loads(response.text)
-    recommended_video_info = normalized_names_to_video_info([r["name"] for r in result])
+    result = await json.loads(response_text)
+    recommended_video_info = await normalized_names_to_video_info(
+        [r["name"] for r in result]
+    )
     recommended_video_info = [
-        vi
-        for vi in recommended_video_info
+        video
+        for video in recommended_video_info
         if (
-            (vi.get("value_type") == "stream")
-            & any(key in vi.get("value", []) for key in ("video", "audio"))
+            (video.get("value_type") == "stream")
+            & any(key in video.get("value", []) for key in ("video", "audio"))
         )
     ]
 
@@ -448,7 +464,7 @@ def get_recommended(video_title: str, video_id: str) -> List[dict]:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def normalized_names_to_video_info(normalized_names: List[str]) -> list:
+async def normalized_names_to_video_info(normalized_names: List[str]) -> list:
     """
     Convert a list of normalized names of videos to a list of raw video dicts for those videos.
 
@@ -464,11 +480,12 @@ def normalized_names_to_video_info(normalized_names: List[str]) -> list:
 
     json_data = {"jsonrpc": "2.0", "method": "resolve", "params": {"urls": video_urls}}
 
-    response = make_request(
+    response = await make_request(
         request=requests.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
     )
+    response_text = await response.text()
 
-    result = json.loads(response.text)
+    result = json.loads(response_text)
 
     return [result["result"][video_url] for video_url in video_urls]
 
@@ -476,16 +493,17 @@ def normalized_names_to_video_info(normalized_names: List[str]) -> list:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
-def get_streaming_url(canonical_url: str) -> str:
+async def get_streaming_url(canonical_url: str) -> str:
     """Retrieve the `streaming_url` for a specified video."""
 
     json_data = {"jsonrpc": "2.0", "method": "get", "params": {"uri": canonical_url}}
 
-    response = make_request(
+    response = await make_request(
         request=requests.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
     )
+    response_text = await response.text()
 
-    video_url = json.loads(response.text).get("result", {}).get("streaming_url")
+    video_url = json.loads(response_text).get("result", {}).get("streaming_url")
 
     return video_url
 
