@@ -2,9 +2,7 @@
 
 """Base classes and methods for scraping video data from Odysee video platform.
 """
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
+import asyncio
 import json
 import typing
 from collections import Counter
@@ -13,6 +11,9 @@ from datetime import datetime
 from urllib.parse import unquote
 
 from polyphemus import api
+
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
@@ -81,7 +82,9 @@ class OdyseeChannelScraper:
         else:
             self.auth_token = auth_token
 
-        self._raw_channel_info = api.get_channel_info(channel_name=self._channel_name)
+        self._raw_channel_info = asyncio.run(
+            api.get_channel_info(channel_name=self._channel_name)
+        )
         self._channel_id = self._raw_channel_info["channel_id"]
 
     # -------------------------------------------------------------------------#
@@ -89,8 +92,8 @@ class OdyseeChannelScraper:
     def get_entity(self) -> Channel:
         """Return Channel object containing information about the specified channel."""
 
-        subscribers = api.get_subscribers(
-            channel_id=self._channel_id, auth_token=self.auth_token
+        subscribers = asyncio.run(
+            api.get_subscribers(channel_id=self._channel_id, auth_token=self.auth_token)
         )
 
         return Channel(
@@ -111,7 +114,9 @@ class OdyseeChannelScraper:
     ) -> typing.Generator[Video, None, None]:
         """Return list of Video objects for all videos posted by the specified channel"""
 
-        raw_video_info_list = api.get_raw_video_info_list(channel_id=self._channel_id)
+        raw_video_info_list = asyncio.run(
+            api.get_raw_video_info_list(channel_id=self._channel_id)
+        )
         videos = (
             process_raw_video_info(
                 raw_video_info=raw_video_info,
@@ -137,7 +142,9 @@ class OdyseeChannelScraper:
         raw_comment_info_list = []
 
         for video in all_videos:
-            raw_comment_info_list.extend(api.get_all_comments(video_id=video.claim_id))
+            raw_comment_info_list.extend(
+                asyncio.run(api.get_all_comments(video_id=video.claim_id))
+            )
 
         all_comments = [
             process_raw_comment_info(raw_comment_info)
@@ -280,7 +287,7 @@ class RecommendationEngine:
 
     def __init__(self, channel_list):
         self.channel_list = channel_list
-        self.auth_token = api.get_auth_token()
+        self.auth_token = asyncio.run(api.get_auth_token())
 
         self.edge_list = []
         self.new_videos = []
@@ -315,8 +322,8 @@ class RecommendationEngine:
                     f"ITERATION: {iteration} | VIDEO: {i} / {len(self.new_videos)} | CLAIM_ID: {claim_id}"
                 )
 
-                recommended_video_info = api.get_recommended(
-                    video_title=title, video_id=claim_id
+                recommended_video_info = asyncio.run(
+                    api.get_recommended(video_title=title, video_id=claim_id)
                 )
 
                 for rec_video_info in recommended_video_info:

@@ -2,11 +2,6 @@
 
 Scraper for alt-tech video sharing platform [Odysee](https://odysee.com/).
 
-### TODO
-
-- [x] Implement CLI
-- [ ] Profile run-time, look into implementing async requests
-
 ## Installation
 
 Polyphemus can be installed with *pip* or built from source.

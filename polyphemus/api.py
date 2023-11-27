@@ -12,7 +12,6 @@ from typing import Tuple, Optional, List, Callable
 from urllib.parse import quote
 
 import aiohttp
-import requests
 
 # API endpoints for Odysee data
 # -----------------------------------------------------------------------------#
@@ -116,17 +115,17 @@ async def process_successful_response(
 
 
 async def get_auth_token() -> str:
-    """Get a fresh authorization token, to use for API calls that require it.
-
-    Note: calling this function many times in quick succession may result in a
-    503 error.
     """
+    Get a fresh authorization token, to use for API calls that require it.
 
-    response = await make_request(
-        request=requests.post, kwargs={"url": NEW_USER_API_URL}
-    )
-    response_text = await response.text()
-    auth_token = json.loads(response_text)["data"]["auth_token"]
+    Note: calling this function many times in quick succession may result in a 503 error.
+    """
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.post, kwargs={"url": NEW_USER_API_URL}
+        )
+        response_text = await response.text()
+        auth_token = json.loads(response_text)["data"]["auth_token"]
 
     return auth_token
 
@@ -145,23 +144,24 @@ async def get_channel_info(channel_name: str) -> dict:
         "params": {"urls": [channel_url]},
     }
 
-    response = await make_request(
-        request=requests.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
-    )
-    response_text = await response.text()
-    result = json.loads(response_text)
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
+        )
+        response_text = await response.text()
+        result = json.loads(response_text)
 
-    info = result["result"][channel_url]
+        info = result["result"][channel_url]
 
-    info = {
-        "channel_id": info["claim_id"],
-        "title": info["value"].get("title"),
-        "created": info["timestamp"],
-        "description": info["value"].get("description"),
-        "cover_image": info["value"].get("cover", {}).get("url"),
-        "thumbnail_image": info["value"].get("thumbnail", {}).get("url"),
-        "raw": response_text,
-    }
+        info = {
+            "channel_id": info["claim_id"],
+            "title": info["value"].get("title"),
+            "created": info["timestamp"],
+            "description": info["value"].get("description"),
+            "cover_image": info["value"].get("cover", {}).get("url"),
+            "thumbnail_image": info["value"].get("thumbnail", {}).get("url"),
+            "raw": response_text,
+        }
 
     return info
 
@@ -173,17 +173,18 @@ async def get_subscribers(channel_id: str, auth_token: str = None) -> int:
     """Get the number of subscribers for a channel."""
 
     if auth_token is None:
-        auth_token = get_auth_token()
+        auth_token = await get_auth_token()
 
     json_data = {"auth_token": auth_token, "claim_id": channel_id}
 
-    response = await make_request(
-        request=requests.post, kwargs={"url": SUBSCRIBER_API_URL, "data": json_data}
-    )
-    response_text = await response.text()
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.post, kwargs={"url": SUBSCRIBER_API_URL, "data": json_data}
+        )
+        response_text = await response.text()
 
-    result = json.loads(response_text)
-    subscribers = result["data"][0]
+        result = json.loads(response_text)
+        subscribers = result["data"][0]
 
     return subscribers
 
@@ -233,46 +234,47 @@ async def get_raw_video_info_list(channel_id: str) -> list:
             },
         }
 
-        response = await make_request(
-            request=requests.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
-        )
-        response_text = await response.text()
+        async with aiohttp.ClientSession() as session:
+            response = await make_request(
+                request=session.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
+            )
+            response_text = await response.text()
 
-        result = json.loads(response_text)
+            result = json.loads(response_text)
 
-        videos = result["result"]["items"]
-        new_videos = {
-            video["claim_id"]: video
-            for video in videos
-            if video["claim_id"] not in claim_id_to_raw_video_info
-        }
+            videos = result["result"]["items"]
+            new_videos = {
+                video["claim_id"]: video
+                for video in videos
+                if video["claim_id"] not in claim_id_to_raw_video_info
+            }
 
-        if len(new_videos) == 0:
-            # if there are no new videos that haven't already been scraped
-            if hit_video_limit:
-                # if Odysee's limit of 1000 videos for a given timestamp was
-                # reached (which updates the `release_time`) on the last
-                # request, this means we have scraped all videos on the channel,
-                # so we break the loop.
-                break
+            if len(new_videos) == 0:
+                # if there are no new videos that haven't already been scraped
+                if hit_video_limit:
+                    # if Odysee's limit of 1000 videos for a given timestamp was
+                    # reached (which updates the `release_time`) on the last
+                    # request, this means we have scraped all videos on the channel,
+                    # so we break the loop.
+                    break
+                else:
+                    # we have hit Odysee's limit of 1000 videos for a given
+                    # timestamp, so we update `release_time` and reset `page`
+                    hit_video_limit = True
+                    release_time = min(
+                        [
+                            raw_video_info["meta"]["creation_timestamp"]
+                            for raw_video_info in claim_id_to_raw_video_info.values()
+                        ],
+                        default=0,
+                    )
+                    page = 1
             else:
-                # we have hit Odysee's limit of 1000 videos for a given
-                # timestamp, so we update `release_time` and reset `page`
-                hit_video_limit = True
-                release_time = min(
-                    [
-                        raw_video_info["meta"]["creation_timestamp"]
-                        for raw_video_info in claim_id_to_raw_video_info.values()
-                    ],
-                    default=0,
-                )
-                page = 1
-        else:
-            # there were unscraped videos from the last request, so we keep
-            # going in the loop and increment the `page` variable
-            claim_id_to_raw_video_info.update(new_videos)
-            page += 1
-            hit_video_limit = False
+                # there were unscraped videos from the last request, so we keep
+                # going in the loop and increment the `page` variable
+                claim_id_to_raw_video_info.update(new_videos)
+                page += 1
+                hit_video_limit = False
 
     return list(claim_id_to_raw_video_info.values())
 
@@ -284,16 +286,17 @@ async def get_views(video_id: str, auth_token: str = None) -> int:
     """Get the number of views for a given video."""
 
     if auth_token is None:
-        auth_token = get_auth_token()
+        auth_token = await get_auth_token()
 
     params = {"auth_token": auth_token, "claim_id": video_id}
 
-    response = await make_request(
-        request=requests.get, kwargs={"url": VIEW_API_URL, "params": params}
-    )
-    response_text = await response.text()
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.get, kwargs={"url": VIEW_API_URL, "params": params}
+        )
+        response_text = await response.text()
 
-    views = json.loads(response_text)["data"][0]
+        views = json.loads(response_text)["data"][0]
 
     return views
 
@@ -307,22 +310,23 @@ async def get_video_reactions(
     """Get all reactions for a given video."""
 
     if auth_token is None:
-        auth_token = get_auth_token()
+        auth_token = await get_auth_token()
 
     post_data = {"auth_token": auth_token, "claim_ids": video_id}
 
-    response = await make_request(
-        request=requests.post, kwargs={"url": REACTION_API_URL, "data": post_data}
-    )
-    response_text = await response.text()
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.post, kwargs={"url": REACTION_API_URL, "data": post_data}
+        )
+        response_text = await response.text()
 
-    result = json.loads(response_text)
+        result = json.loads(response_text)
 
-    if result["success"]:
-        reactions = result["data"]["others_reactions"][video_id]
-        return reactions["like"], reactions["dislike"]
-    else:
-        return None, None
+        if result["success"]:
+            reactions = result["data"]["others_reactions"][video_id]
+            return reactions["like"], reactions["dislike"]
+        else:
+            return None, None
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
@@ -362,20 +366,21 @@ async def get_all_comments(video_id: str) -> List[dict]:
             },
         }
 
-        response = await make_request(
-            request=requests.post, kwargs={"url": COMMENT_API_URL, "json": json_data}
-        )
-        response_text = await response.text()
+        async with aiohttp.ClientSession() as session:
+            response = await make_request(
+                request=session.post, kwargs={"url": COMMENT_API_URL, "json": json_data}
+            )
+            response_text = await response.text()
 
-        result = json.loads(response_text)
+            result = json.loads(response_text)
 
-        if "items" not in result["result"]:
-            break
-        else:
-            _comments = result["result"]["items"]
-            comments = await append_comment_reactions(comment_info_list=_comments)
-            all_comments.extend(comments)
-            page += 1
+            if "items" not in result["result"]:
+                break
+            else:
+                _comments = result["result"]["items"]
+                comments = await append_comment_reactions(comment_info_list=_comments)
+                all_comments.extend(comments)
+                page += 1
 
     return all_comments
 
@@ -412,18 +417,19 @@ async def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
         "params": {"comment_ids": comment_ids},
     }
 
-    response = await make_request(
-        request=requests.post, kwargs={"url": COMMENT_API_URL, "json": json_data}
-    )
-    response_text = await response.text()
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.post, kwargs={"url": COMMENT_API_URL, "json": json_data}
+        )
+        response_text = await response.text()
 
-    result = json.loads(response_text)
+        result = json.loads(response_text)
 
-    reactions = result["result"]["others_reactions"]
+        reactions = result["result"]["others_reactions"]
 
-    for comment in comment_info_list:
-        comment["likes"] = reactions[comment["comment_id"]]["like"]
-        comment["dislikes"] = reactions[comment["comment_id"]]["dislike"]
+        for comment in comment_info_list:
+            comment["likes"] = reactions[comment["comment_id"]]["like"]
+            comment["dislikes"] = reactions[comment["comment_id"]]["dislike"]
 
     return comment_info_list
 
@@ -440,23 +446,25 @@ async def get_recommended(video_title: str, video_id: str) -> List[dict]:
 
     params = {"s": name, "size": "20", "from": "0", "related_to": video_id}
 
-    response = await make_request(
-        request=requests.get, kwargs={"url": RECOMMENDATION_API_URL, "params": params}
-    )
-    response_text = await response.text()
-
-    result = await json.loads(response_text)
-    recommended_video_info = await normalized_names_to_video_info(
-        [r["name"] for r in result]
-    )
-    recommended_video_info = [
-        video
-        for video in recommended_video_info
-        if (
-            (video.get("value_type") == "stream")
-            & any(key in video.get("value", []) for key in ("video", "audio"))
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.get,
+            kwargs={"url": RECOMMENDATION_API_URL, "params": params},
         )
-    ]
+        response_text = await response.text()
+
+        result = await json.loads(response_text)
+        recommended_video_info = await normalized_names_to_video_info(
+            [r["name"] for r in result]
+        )
+        recommended_video_info = [
+            video
+            for video in recommended_video_info
+            if (
+                (video.get("value_type") == "stream")
+                & any(key in video.get("value", []) for key in ("video", "audio"))
+            )
+        ]
 
     return recommended_video_info
 
@@ -480,12 +488,13 @@ async def normalized_names_to_video_info(normalized_names: List[str]) -> list:
 
     json_data = {"jsonrpc": "2.0", "method": "resolve", "params": {"urls": video_urls}}
 
-    response = await make_request(
-        request=requests.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
-    )
-    response_text = await response.text()
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
+        )
+        response_text = await response.text()
 
-    result = json.loads(response_text)
+        result = json.loads(response_text)
 
     return [result["result"][video_url] for video_url in video_urls]
 
@@ -498,12 +507,13 @@ async def get_streaming_url(canonical_url: str) -> str:
 
     json_data = {"jsonrpc": "2.0", "method": "get", "params": {"uri": canonical_url}}
 
-    response = await make_request(
-        request=requests.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
-    )
-    response_text = await response.text()
+    async with aiohttp.ClientSession() as session:
+        response = await make_request(
+            request=session.post, kwargs={"url": BACKEND_API_URL, "json": json_data}
+        )
+        response_text = await response.text()
 
-    video_url = json.loads(response_text).get("result", {}).get("streaming_url")
+        video_url = json.loads(response_text).get("result", {}).get("streaming_url")
 
     return video_url
 
