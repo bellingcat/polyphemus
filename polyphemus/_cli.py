@@ -58,23 +58,6 @@ def create_parser() -> argparse.ArgumentParser:
         dest="target",
         help="target",
     )
-    profiler_parser = subparsers.add_parser("profiler", help="enable runtime profiling")
-    profiler_parser.add_argument(
-        "--sort",
-        choices=[
-            "ttot",
-            "tsub",
-            "ncall",
-            "tavg",
-            "name",
-            "module",
-            "lineno",
-            "builtin",
-            "threadid",
-            "tt_perc",
-            "tsub_perc",
-        ],
-    )
 
     # Parser for channel-related operations.
     channel_parser = subparsers.add_parser(

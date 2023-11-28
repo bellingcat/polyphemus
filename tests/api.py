@@ -13,9 +13,9 @@ from the project root directory.
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-import pytest
+import asyncio
 
-from polyphemus import api
+import pytest
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
@@ -41,7 +41,7 @@ def test_minimal_init(resources, function_str, kwargs):
     function = eval(f"api.{function_str}")
     function_kwargs = {kwarg: resources[kwarg] for kwarg in kwargs}
 
-    function(**function_kwargs)
+    asyncio.run(function(**function_kwargs))
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#

@@ -6,13 +6,13 @@ Scraper for alt-tech video sharing platform [Odysee](https://odysee.com/).
 
 Polyphemus can be installed with *pip* or built from source.
 
-### with Pip
+### Installing with Pip
 
 ```commandline
 pip install git+https://github.com/bellingcat/polyphemus.git
 ```
 
-### Build from source
+### Building from source
 
 1. Clone the repo
 
@@ -20,13 +20,13 @@ pip install git+https://github.com/bellingcat/polyphemus.git
 git clone https://github.com/bellingcat/polyphemus
 ```
 
-2. Navigate to the cloned project repo
+2. Navigate to the cloned project directory
 
 ```commandline
 cd polyphemus
 ```
 
-3. Build and install
+3. Build and install.
 
 ```commandline
 pip install .
@@ -34,14 +34,19 @@ pip install .
 
 ## Usage
 
+Polyphemus can be run directly from the command-line or imported as a Python library
+
 ### Polyphemus CLI
+
+To run the CLI instance of Polyphemus, you have to call it from the command-line and pass in command line arguments.
+> Use `-h/--help` to get started
 
 ```commandline
 polyphemus -h
 ```
 
 ```commandline
-usage: polyphemus [-h] {channel,video,misc} ...
+usage: polyphemus [-h] [--runtime-prof] [-pct {WALL,CPU}] [-psc {ttot,tsub,tavg,ncall,name,lineno,builtin,threadid,tt_perc,tsub_perc}] {channel,video,misc} ...
 
 Polyphemus: Scraper for Odysee, an alt-tech platform for sharing video.
 
@@ -53,12 +58,17 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --runtime-prof        enable runtime profiler.
+  -pct {WALL,CPU}, --prof-clock-type {WALL,CPU}
+                        set profiler clock type (default: CPU)
+  -psc {ttot,tsub,tavg,ncall,name,lineno,builtin,threadid,tt_perc,tsub_perc}, --prof-sort {ttot,tsub,tavg,ncall,name,lineno,builtin,threadid,tt_perc,tsub_perc}
+                        profiler output sort criterion (default: ncall)
 
 Copyright © 2022-2023 Bellingcat. All rights reserved.
 
 ```
 
-#### Examples
+#### CLI Examples
 
 ##### Get channel profile info
 
@@ -72,13 +82,12 @@ polyphemus channel profile --name channel_name
 polyphemus video views --id claim_id
 ```
 
-### Polyphemus Library
+### Polyphemus Python Library
 
-Polyphemus can also be integrated into other python projects by importing and accessing its scraper classes and
-functions
+To integrate Polyphemus in your projects, you will need to import it as follows:
 
 ```python
-import polyphemus
+from polyphemus import api, base
 ```
 
-> Library code examples are available [here](examples).
+> Code examples are available [here](examples).

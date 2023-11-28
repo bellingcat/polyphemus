@@ -78,7 +78,7 @@ class OdyseeChannelScraper:
         self._channel_name = unquote(channel_name)
 
         if auth_token is None:
-            self.auth_token = api.get_auth_token()
+            self.auth_token = asyncio.run(api.get_auth_token())
         else:
             self.auth_token = auth_token
 
