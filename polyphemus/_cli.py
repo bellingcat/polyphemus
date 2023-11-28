@@ -3,9 +3,9 @@
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 import argparse
 import asyncio
-import cProfile
-import pstats
 from pprint import pprint
+
+import yappi
 
 from . import api
 
@@ -20,11 +20,60 @@ def create_parser() -> argparse.ArgumentParser:
         description="Polyphemus: Scraper for Odysee, an alt-tech platform for sharing video.",
         epilog="Copyright © 2022-2023 Bellingcat. All rights reserved.",
     )
+    parser.add_argument(
+        "--runtime-prof",
+        help="enable runtime profiler.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-pct",
+        "--prof-clock-type",
+        dest="prof_clock_type",
+        help="set profiler clock type (default: %(default)s)",
+        default="CPU",
+        choices=["WALL", "CPU"],
+    )
+    parser.add_argument(
+        "-psc",
+        "--prof-sort",
+        dest="prof_sort_criterion",
+        help="profiler output sort criterion (default: %(default)s)",
+        default="ncall",
+        choices=[
+            "ttot",
+            "tsub",
+            "tavg",
+            "ncall",
+            "name",
+            "lineno",
+            "builtin",
+            "threadid",
+            "tt_perc",
+            "tsub_perc",
+        ],
+    )
 
     # Creating subparsers for different command categories.
     subparsers = parser.add_subparsers(
         dest="target",
         help="target",
+    )
+    profiler_parser = subparsers.add_parser("profiler", help="enable runtime profiling")
+    profiler_parser.add_argument(
+        "--sort",
+        choices=[
+            "ttot",
+            "tsub",
+            "ncall",
+            "tavg",
+            "name",
+            "module",
+            "lineno",
+            "builtin",
+            "threadid",
+            "tt_perc",
+            "tsub_perc",
+        ],
     )
 
     # Parser for channel-related operations.
@@ -143,10 +192,9 @@ arguments_mapping: dict = {
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 def main():
     """Main entrypoint for polyphemus cli."""
-    arguments: argparse = create_parser().parse_args()
+    arguments = create_parser().parse_args()
 
     try:
-        # Validate and execute the command based on user input.
         if (
             arguments.target in arguments_mapping
             and arguments.data in arguments_mapping.get(arguments.target)
@@ -155,44 +203,50 @@ def main():
                 arguments.data
             )
 
-            # Preparing keyword arguments for the function call.
-            kwargs: dict = {
+            # Preparing keyword arguments for the function call
+            kwargs = {
                 argument: getattr(arguments, argument)
                 for argument in function_arguments
             }
 
-            # Check for missing expected arguments before calling the function.
+            # Check for missing expected arguments
             if any(kwargs.get(argument) is None for argument in function_arguments):
                 print(
                     f"polyphemus {arguments.target}: missing expected argument(s) for `{arguments.data}` operation."
                 )
-                # Display usage if one or more expected arguments are missing.
                 create_parser().print_usage()
                 return
 
             # Initializing the profiler
-            profiler = cProfile.Profile()
-            profiler.enable()
+            if arguments.profiler:
+                # Ensure Yappi is not running when clearing stats or changing clock type
+                if yappi.is_running():
+                    yappi.stop()
+                yappi.clear_stats()
 
-            # Executing the function asynchronously and profiling its performance.
+                # Set clock type and start profiling
+                yappi.set_clock_type(arguments.prof_clock_type)
+                yappi.start()
+
+            # Executing the function asynchronously
             call_function = asyncio.run(function(**kwargs))
             pprint(call_function)
 
-            # Stopping the profiler and printing the stats
-            profiler.disable()
-            stats = pstats.Stats(profiler)
-            # Sorting and printing the top 10 time-consuming functions
-            stats.sort_stats("cumulative").print_stats(10)
+            # Stop profiler and print stats
+            if arguments.profiler:
+                yappi.stop()
+                yappi.get_thread_stats().print_all()
+                yappi.get_func_stats().sort(
+                    sort_type=arguments.prof_sort_criterion, sort_order="asc"
+                ).print_all()
+                yappi.clear_stats()
 
         else:
-            # Display usage if arguments.data is not valid.
             create_parser().print_usage()
 
     except KeyboardInterrupt:
-        # Handle user interruption exception
         print("User interruption detected (Ctrl+C)")
     except Exception as error:
-        # General exception handling for any unexpected errors.
         print(f"An unknown error occurred: {error}")
 
 
