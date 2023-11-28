@@ -41,7 +41,7 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-    entry_points={"console_scripts": ["polyphemus = polyphemus._cli:main"]},
+    entry_points={"console_scripts": ["polyphemus = polyphemus._cli:run"]},
 )
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#

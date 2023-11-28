@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
 import argparse
 import asyncio
 from pprint import pprint
@@ -10,7 +11,7 @@ import yappi
 from . import api
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 # Function to create and configure the argument parser.
@@ -22,6 +23,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--runtime-prof",
+        dest="runtime_profiler",
         help="enable runtime profiler.",
         action="store_true",
     )
@@ -144,7 +146,7 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 # Mapping of functions to their respective command-line arguments.
 arguments_mapping: dict = {
@@ -173,8 +175,10 @@ arguments_mapping: dict = {
 }
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-def main():
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
+
+def run():
     """Main entrypoint for polyphemus cli."""
     parser = create_parser()
     arguments = parser.parse_args()
@@ -203,12 +207,7 @@ def main():
                 return
 
             # Initializing the profiler
-            if arguments.profiler:
-                # Ensure Yappi is not running when clearing stats or changing clock type
-                if yappi.is_running():
-                    yappi.stop()
-                yappi.clear_stats()
-
+            if arguments.runtime_profiler:
                 # Set clock type and start profiling
                 yappi.set_clock_type(arguments.prof_clock_type)
                 yappi.start()
@@ -218,13 +217,11 @@ def main():
             pprint(call_function)
 
             # Stop profiler and print stats
-            if arguments.profiler:
+            if arguments.runtime_profiler:
                 yappi.stop()
-                yappi.get_thread_stats().print_all()
                 yappi.get_func_stats().sort(
-                    sort_type=arguments.prof_sort_criterion, sort_order="asc"
+                    sort_type=arguments.prof_sort_criterion
                 ).print_all()
-                yappi.clear_stats()
 
         else:
             parser.print_usage()
@@ -235,4 +232,4 @@ def main():
         print(f"An unknown error occurred: {error}")
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #

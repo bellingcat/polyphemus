@@ -3,13 +3,13 @@
 """Configuration for pytest sessions
 """
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 import pytest
 
 from polyphemus.api import get_auth_token
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 CHANNEL_NAME = "Mak1nBacon"
 CHANNEL_ID = "fb2a33dc4252feb2e99c6d6949fbd3cc557cab2b"
@@ -40,7 +40,12 @@ FULL_VIDEO_INFO = {
             "cover": {
                 "url": "https://thumbs.odycdn.com/6b6e3f5ed6b62e96e8013bbcfa486896.png"
             },
-            "description": "Hello ladies and men! In case you're wondering, yes, i'm still a piece of pork.\n\nBasically, i'm a random animator trying out Odysee. I make an object show called Meanwhile in the Void and random memes and animations too!\n\nIf you like this type of content, you're welcome to watch, but if you don't like my content, you're also welcome to watch! I don't mind lol.\n\nIf you're considering helping the channel, feel free to follow me!\n\nBacon included. ;)\n\nSee ya soon, stay calm, stick around and stay alive!",
+            "description": "Hello ladies and men! In case you're wondering, "
+            "yes, i'm still a piece of pork.\n\nBasically, i'm a random animator trying out Odysee."
+            " I make an object show called Meanwhile in the Void and random memes and animations too!\n\n"
+            "If you like this type of content, you're welcome to watch, but if you don't like my content"
+            ", you're also welcome to watch! I don't mind lol.\n\nIf you're considering helping the channel,"
+            " feel free to follow me!\n\nBacon included. ;)\n\nSee ya soon, stay calm, stick around and stay alive!",
             "tags": ["comedy", "animation", "art", "funny", "object show"],
             "thumbnail": {"url": "https://spee.ch/b/e4e3a6562e4b1cd5.png"},
             "title": "Mak1n' Bacon",
@@ -71,7 +76,8 @@ COMMENT_INFO_LIST = [
         "comment_id": "320a0823689b9dbefad768598d89816bda0a015b11ad4b522bc0112a8089b3f5",
         "claim_id": "a754344cd7887a15ab4fddaa893ff08926c63bf3",
         "timestamp": 1644193831,
-        "signature": "444835698b1bfe160c775210b9542970b14c8dcb7b88118a367c2fe102bb2ddcc3fa3881827a789cb183f2e3fd5c8f263ec05d7c431cfe8e145d7f3f501c0668",
+        "signature": "444835698b1bfe160c775210b9542970b14c8dcb7b88118a367"
+        "c2fe102bb2ddcc3fa3881827a789cb183f2e3fd5c8f263ec05d7c431cfe8e145d7f3f501c0668",
         "signing_ts": "1644193830",
         "channel_id": "a641423e6e20718f3d59138a17cf530bb419d86b",
         "channel_name": "@devnull",
@@ -80,7 +86,7 @@ COMMENT_INFO_LIST = [
     }
 ]
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 @pytest.fixture(scope="module")
@@ -104,4 +110,4 @@ def resources():
     return resources_dict
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #

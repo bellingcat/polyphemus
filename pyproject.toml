@@ -11,7 +11,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.9"
 aiohttp = "*"
 beautifulsoup4 = "*"
 pandas = "*"
@@ -30,4 +30,4 @@ docs = ["sphinx", "sphinx_rtd_theme"]
 tests = ["pytest", "pytest-cov", "pytest-html", "pytest-metadata"]
 
 [tool.poetry.scripts]
-polyphemus = "polyphemus._cli:main"
+polyphemus = "polyphemus._cli:run"

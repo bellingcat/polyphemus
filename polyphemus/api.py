@@ -3,7 +3,7 @@
 """Functions to request and process information from Odysee APIs
 """
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 import asyncio
 import json
@@ -14,7 +14,7 @@ from urllib.parse import quote
 import aiohttp
 
 # API endpoints for Odysee data
-# -----------------------------------------------------------------------------#
+# ----------------------------------------------------------------------------- #
 
 BACKEND_API_URL = "https://api.na-backend.odysee.com/api/v1/proxy"
 SUBSCRIBER_API_URL = "https://api.odysee.com/subscription/sub_count"
@@ -27,7 +27,7 @@ NEW_USER_API_URL = "https://api.odysee.com/user/new"
 # Allow responses to `get_streaming_url` that contain no `streaming_url` field
 ALLOWED_ERROR_CODES = [-32603]
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def make_request(request: Callable, kwargs: dict) -> aiohttp.ClientResponse:
@@ -111,14 +111,16 @@ async def process_successful_response(
     return response
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_auth_token() -> str:
     """
     Get a fresh authorization token, to use for API calls that require it.
 
-    Note: calling this function many times in quick succession may result in a 503 error.
+    Note:
+    -----
+    calling this function many times in quick succession may result in a 503 error.
     """
     async with aiohttp.ClientSession() as session:
         response = await make_request(
@@ -130,7 +132,7 @@ async def get_auth_token() -> str:
     return auth_token
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_channel_info(channel_name: str) -> dict:
@@ -166,7 +168,7 @@ async def get_channel_info(channel_name: str) -> dict:
     return info
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_subscribers(channel_id: str, auth_token: str = None) -> int:
@@ -189,7 +191,7 @@ async def get_subscribers(channel_id: str, auth_token: str = None) -> int:
     return subscribers
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_raw_video_info_list(channel_id: str) -> list:
@@ -279,7 +281,7 @@ async def get_raw_video_info_list(channel_id: str) -> list:
     return list(claim_id_to_raw_video_info.values())
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_views(video_id: str, auth_token: str = None) -> int:
@@ -301,7 +303,7 @@ async def get_views(video_id: str, auth_token: str = None) -> int:
     return views
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_video_reactions(
@@ -329,7 +331,7 @@ async def get_video_reactions(
             return None, None
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_all_comments(video_id: str) -> List[dict]:
@@ -385,7 +387,7 @@ async def get_all_comments(video_id: str) -> List[dict]:
     return all_comments
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
@@ -434,7 +436,7 @@ async def append_comment_reactions(comment_info_list: List[dict]) -> List[dict]:
     return comment_info_list
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_recommended(video_title: str, video_id: str) -> List[dict]:
@@ -469,7 +471,7 @@ async def get_recommended(video_title: str, video_id: str) -> List[dict]:
     return recommended_video_info
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def normalized_names_to_video_info(normalized_names: List[str]) -> list:
@@ -499,7 +501,7 @@ async def normalized_names_to_video_info(normalized_names: List[str]) -> list:
     return [result["result"][video_url] for video_url in video_urls]
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 async def get_streaming_url(canonical_url: str) -> str:
@@ -518,4 +520,4 @@ async def get_streaming_url(canonical_url: str) -> str:
     return video_url
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #

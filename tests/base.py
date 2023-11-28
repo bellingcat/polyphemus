@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 
-"""Tests for to polyphemus.base module.
+"""Tests for polyphemus.base module.
 
 The full set of tests for this module can be evaluated by executing the
 command::
@@ -11,13 +11,14 @@ from the project root directory.
 
 """
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 import pytest
 
 from polyphemus import base
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 class TestOdyseeChannelScraper:
@@ -35,7 +36,7 @@ class TestOdyseeChannelScraper:
         self.scraper.get_all_videos_and_comments()
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 def test_process_raw_video_info(resources):
@@ -44,14 +45,14 @@ def test_process_raw_video_info(resources):
     )
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 def test_process_raw_comment_info(resources):
     base.process_raw_comment_info(raw_comment_info=resources["full_comment_info"])
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 class TestRecommendationEngine:
@@ -65,4 +66,4 @@ class TestRecommendationEngine:
         self.engine.generate(iterations=1)
 
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
