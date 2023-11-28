@@ -129,6 +129,7 @@ def create_parser() -> argparse.ArgumentParser:
     miscellaneous_parser.add_argument(
         "-c",
         "--comments",
+        type=list,
         dest="comments_list",
         help="(use to get `append_comments_reactions`) list of dictionaries, each dict corresponding to a JSON"
         " response about a single comment for a specified video.",
