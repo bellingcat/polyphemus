@@ -117,6 +117,7 @@ class OdyseeChannelScraper:
         raw_video_info_list = asyncio.run(
             api.get_raw_video_info_list(channel_id=self._channel_id)
         )
+
         videos = (
             process_raw_video_info(
                 raw_video_info=raw_video_info,
@@ -161,7 +162,7 @@ def process_raw_video_info(
     raw_video_info: dict, auth_token: str = None, additional_fields: bool = True
 ) -> Video:
     if auth_token is None:
-        auth_token = api.get_auth_token()
+        auth_token = asyncio.run(api.get_auth_token())
     else:
         auth_token = auth_token
 
@@ -223,10 +224,12 @@ def process_raw_video_info(
         if raw_video_info["name"] == "live":
             streaming_url = None
         else:
-            streaming_url = api.get_streaming_url(raw_video_info["canonical_url"])
-        views = api.get_views(video_id=claim_id, auth_token=auth_token)
-        likes, dislikes = api.get_video_reactions(
-            video_id=claim_id, auth_token=auth_token
+            streaming_url = asyncio.run(
+                api.get_streaming_url(raw_video_info["canonical_url"])
+            )
+        views = asyncio.run(api.get_views(video_id=claim_id, auth_token=auth_token))
+        likes, dislikes = asyncio.run(
+            api.get_video_reactions(video_id=claim_id, auth_token=auth_token)
         )
 
     else:
