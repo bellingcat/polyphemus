@@ -111,7 +111,7 @@ def create_parser() -> argparse.ArgumentParser:
         dest="video_title",
     )
     video_parser.add_argument(
-        "-Cu",
+        "-cu",
         "--canonical-url",
         help="video canonical_url: use to get a video's `streaming_url`",
         dest="canonical_url",
@@ -135,7 +135,7 @@ def create_parser() -> argparse.ArgumentParser:
         " response about a single comment for a specified video.",
     )
     miscellaneous_parser.add_argument(
-        "-Nn",
+        "-nn",
         "--normalized-names",
         dest="normalized_names",
         help="a dash (-) separated list of normalized names (e.g. si-une-tude-montre-que-le-masque-permet): "
