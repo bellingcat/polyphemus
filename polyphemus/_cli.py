@@ -175,7 +175,8 @@ arguments_mapping: dict = {
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 def main():
     """Main entrypoint for polyphemus cli."""
-    arguments = create_parser().parse_args()
+    parser = create_parser()
+    arguments = parser.parse_args()
 
     try:
         if (
@@ -197,7 +198,7 @@ def main():
                 print(
                     f"polyphemus {arguments.target}: missing expected argument(s) for `{arguments.data}` operation."
                 )
-                create_parser().print_usage()
+                parser.print_usage()
                 return
 
             # Initializing the profiler
@@ -225,7 +226,7 @@ def main():
                 yappi.clear_stats()
 
         else:
-            create_parser().print_usage()
+            parser.print_usage()
 
     except KeyboardInterrupt:
         print("User interruption detected (Ctrl+C)")
