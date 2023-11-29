@@ -235,17 +235,13 @@ def run():
 
             # -------------------------------------- #
 
-            profiler(
-                enable=profiler_arguments.has_been_run, arguments=profiler_arguments
-            )
+            profiler(enable=True, arguments=profiler_arguments)
 
             # Executing the function asynchronously
             call_function = asyncio.run(function(**kwargs))
             pprint(call_function)
 
-            profiler(
-                enable=profiler_arguments.has_been_run, arguments=profiler_arguments
-            )
+            profiler(enable=False, arguments=profiler_arguments)
             # -------------------------------------- #
 
         else:
