@@ -36,10 +36,10 @@ def create_parser() -> argparse.ArgumentParser:
         choices=["WALL", "CPU"],
     )
     parser.add_argument(
-        "-psc",
-        "--prof-sort",
-        dest="prof_sort_criterion",
-        help="profiler output sort criterion (default: %(default)s)",
+        "-pss",
+        "--prof-stats-sort",
+        dest="prof_stats_sort",
+        help="profiler stats sort criterion (default: %(default)s)",
         default="ncall",
         choices=[
             "ttot",
@@ -176,52 +176,79 @@ arguments_mapping: dict = {
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+def profiler(enable: bool, arguments: argparse):
+    """
+    Enables/Disables the profiler
+
+    Parameters
+    ----------
+    enable: bool
+        A boolean value indicating whether the profiler is enabled/disabled.
+    arguments: argparse
+        A Namespace object containing profiler options.
+    """
+    if arguments.has_been_run:
+        if enable:
+            yappi.set_clock_type(type=arguments.clock_type)
+            yappi.start()
+        else:
+            yappi.stop()
+            yappi.get_func_stats().sort(sort_type=arguments.stats_sort).print_all()
 
 
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 def run():
     """Main entrypoint for polyphemus cli."""
     parser = create_parser()
-    arguments = parser.parse_args()
+    cli_arguments = parser.parse_args()
+
+    # Create a custom Namespace object to store profiler options
+    profiler_arguments = argparse.Namespace(
+        has_been_run=cli_arguments.runtime_profiler,
+        stats_sort=cli_arguments.prof_stats_sort,
+        clock_type=cli_arguments.prof_clock_type,
+    )
 
     try:
         if (
-            arguments.target in arguments_mapping
-            and arguments.data in arguments_mapping.get(arguments.target)
+            cli_arguments.target in arguments_mapping
+            and cli_arguments.data in arguments_mapping.get(cli_arguments.target)
         ):
-            function, function_arguments = arguments_mapping.get(arguments.target).get(
-                arguments.data
-            )
+            function, function_arguments = arguments_mapping.get(
+                cli_arguments.target
+            ).get(cli_arguments.data)
 
             # Preparing keyword arguments for the function call
             kwargs = {
-                argument: getattr(arguments, argument)
-                for argument in function_arguments
+                cli_argument: getattr(cli_arguments, cli_argument)
+                for cli_argument in function_arguments
             }
 
             # Check for missing expected arguments
-            if any(kwargs.get(argument) is None for argument in function_arguments):
+            if any(
+                kwargs.get(cli_argument) is None for cli_argument in function_arguments
+            ):
                 print(
-                    f"polyphemus {arguments.target}: missing expected argument(s) for `{arguments.data}` operation."
+                    f"polyphemus {cli_arguments.target}: "
+                    f"missing expected argument(s) for `{cli_arguments.data}` operation."
                 )
                 parser.print_usage()
                 return
 
-            # Initializing the profiler
-            if arguments.runtime_profiler:
-                # Set clock type and start profiling
-                yappi.set_clock_type(arguments.prof_clock_type)
-                yappi.start()
+            # -------------------------------------- #
+
+            profiler(
+                enable=profiler_arguments.has_been_run, arguments=profiler_arguments
+            )
 
             # Executing the function asynchronously
             call_function = asyncio.run(function(**kwargs))
             pprint(call_function)
 
-            # Stop profiler and print stats
-            if arguments.runtime_profiler:
-                yappi.stop()
-                yappi.get_func_stats().sort(
-                    sort_type=arguments.prof_sort_criterion
-                ).print_all()
+            profiler(
+                enable=profiler_arguments.has_been_run, arguments=profiler_arguments
+            )
+            # -------------------------------------- #
 
         else:
             parser.print_usage()
@@ -229,7 +256,7 @@ def run():
     except KeyboardInterrupt:
         print("User interruption detected (Ctrl+C)")
     except Exception as error:
-        print(f"An unknown error occurred: {error}")
+        print(f"An error occurred: {error}")
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
