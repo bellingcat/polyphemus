@@ -74,11 +74,6 @@ def create_parser() -> argparse.ArgumentParser:
             "tavg",
             "ncall",
             "name",
-            "lineno",
-            "builtin",
-            "threadid",
-            "tt_perc",
-            "tsub_perc",
         ],
     )
     parser.add_argument(

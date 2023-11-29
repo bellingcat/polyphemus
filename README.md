@@ -49,8 +49,7 @@ polyphemus --help
 
 ```commandline
 usage: polyphemus [-h] [--runtime-prof] [-pct {WALL,CPU}]
-                  [-pst {ttot,tsub,tavg,ncall,name,lineno,builtin,threadid,tt_perc,tsub_perc}]
-                  [-pso {asc,desc}]
+                  [-pst {ttot,tsub,tavg,ncall,name}] [-pso {asc,desc}]
                   {channel,video,misc} ...
 
 Polyphemus: Scraper for Odysee, an alt-tech platform for sharing video.
@@ -66,7 +65,7 @@ options:
   --runtime-prof        enable runtime profiler
   -pct {WALL,CPU}, --prof-clock-type {WALL,CPU}
                         set profiler clock type (default: CPU)
-  -pst {ttot,tsub,tavg,ncall,name,lineno,builtin,threadid,tt_perc,tsub_perc}, --prof-sort-type {ttot,tsub,tavg,ncall,name,lineno,builtin,threadid,tt_perc,tsub_perc}
+  -pst {ttot,tsub,tavg,ncall,name}, --prof-sort-type {ttot,tsub,tavg,ncall,name}
                         set profiler stats' sort type (default: ncall)
   -pso {asc,desc}, --prof-sort-order {asc,desc}
                         set profiler stats' sort order (default: desc)
