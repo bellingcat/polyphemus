@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 
-"""Tests for to polyphemus.base module.
+"""Tests for polyphemus.base module.
 
 The full set of tests for this module can be evaluated by executing the
 command::
@@ -11,19 +11,20 @@ from the project root directory.
 
 """
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 import pytest
 
 from polyphemus import base
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
 
 class TestOdyseeChannelScraper:
-
     @pytest.fixture(autouse=True)
     def test_simple_init(self, resources):
-        self.scraper = base.OdyseeChannelScraper(channel_name = resources['channel_name'])
+        self.scraper = base.OdyseeChannelScraper(channel_name=resources["channel_name"])
 
     def test_get_entity(self):
         self.scraper.get_entity()
@@ -34,25 +35,35 @@ class TestOdyseeChannelScraper:
     def test_get_all_videos_and_comments(self):
         self.scraper.get_all_videos_and_comments()
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
 
 def test_process_raw_video_info(resources):
-    video = base.process_raw_video_info(raw_video_info = resources['full_video_info'], auth_token = resources['auth_token'])
+    video = base.process_raw_video_info(
+        raw_video_info=resources["full_video_info"], auth_token=resources["auth_token"]
+    )
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
 
 def test_process_raw_comment_info(resources):
-    base.process_raw_comment_info(raw_comment_info = resources['full_comment_info'])
+    base.process_raw_comment_info(raw_comment_info=resources["full_comment_info"])
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
 
 class TestRecommendationEngine:
-
     @pytest.fixture(autouse=True)
     def test_simple_init(self, resources):
-        self.engine = base.RecommendationEngine(channel_list = [resources['channel_name']])
+        self.engine = base.RecommendationEngine(
+            channel_list=[resources["channel_name"]]
+        )
 
     def test_generate(self):
-        self.engine.generate(iterations = 1)
+        self.engine.generate(iterations=1)
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #

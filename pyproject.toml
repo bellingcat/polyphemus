@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "polyphemus"
+version = "0.2"
+description = "Scraping Odysee video data"
+authors = ["Bellingcat"]
+homepage = "https://www.bellingcat.com"
+repository = "https://github.com/bellingcat/polyphemus"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+aiohttp = "*"
+beautifulsoup4 = "*"
+pandas = "*"
+yappi = "*"
+
+[tool.poetry.dev-dependencies]
+sphinx = "^3.3.1"
+sphinx_rtd_theme = "^0.5"
+pytest = "^6.1.2"
+pytest-cov = "^2.10.1"
+pytest-html = "^3.0.0"
+pytest-metadata = "^1.10.0"
+
+[tool.poetry.extras]
+docs = ["sphinx", "sphinx_rtd_theme"]
+tests = ["pytest", "pytest-cov", "pytest-html", "pytest-metadata"]
+
+[tool.poetry.scripts]
+polyphemus = "polyphemus._cli:run"
