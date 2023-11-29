@@ -10,6 +10,33 @@ import yappi
 
 from . import api
 
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
+# Mapping of functions to their respective command-line arguments.
+arguments_mapping: dict = {
+    "channel": {
+        "profile": (api.get_channel_info, ["channel_name"]),
+        "videos": (api.get_raw_video_info_list, ["channel_id"]),
+        "subscribers": (api.get_subscribers, ["channel_id"]),
+    },
+    "video": {
+        "views": (api.get_views, ["claim_id"]),
+        "comments": (api.get_all_comments, ["claim_id"]),
+        "reactions": (api.get_video_reactions, ["claim_id"]),
+        "streaming_url": (api.get_streaming_url, ["canonical_url"]),
+        "recommended_videos": (api.get_recommended, ["video_title", "claim_id"]),
+    },
+    "misc": {
+        "append_comments_reactions": (
+            api.append_comment_reactions,
+            ["comments_list"],
+        ),
+        "normalized_names2video_info": (
+            api.normalized_names_to_video_info,
+            ["normalized_names"],
+        ),
+    },
+}
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
@@ -144,35 +171,6 @@ def create_parser() -> argparse.ArgumentParser:
         "use with `normalized_names2video_info` to convert normalized names to a list of videos",
     )
     return parser
-
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-
-# Mapping of functions to their respective command-line arguments.
-arguments_mapping: dict = {
-    "channel": {
-        "profile": (api.get_channel_info, ["channel_name"]),
-        "videos": (api.get_raw_video_info_list, ["channel_id"]),
-        "subscribers": (api.get_subscribers, ["channel_id"]),
-    },
-    "video": {
-        "views": (api.get_views, ["claim_id"]),
-        "comments": (api.get_all_comments, ["claim_id"]),
-        "reactions": (api.get_video_reactions, ["claim_id"]),
-        "streaming_url": (api.get_streaming_url, ["canonical_url"]),
-        "recommended_videos": (api.get_recommended, ["video_title", "claim_id"]),
-    },
-    "misc": {
-        "append_comments_reactions": (
-            api.append_comment_reactions,
-            ["comments_list"],
-        ),
-        "normalized_names2video_info": (
-            api.normalized_names_to_video_info,
-            ["normalized_names"],
-        ),
-    },
-}
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
