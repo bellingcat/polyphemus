@@ -127,7 +127,7 @@ options:
 ### Miscellaneous Operations
 
 ```commandline
-polyphemus misc -h
+polyphemus misc --help
 ```
 
 ```commandline
